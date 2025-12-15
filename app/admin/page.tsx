@@ -9,6 +9,9 @@ import { LogOut, Plus, Package, ShoppingCart, ImageIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
 
+// Force dynamic rendering (no pre-rendering during build)
+export const dynamic = 'force-dynamic'
+
 export default function AdminPage() {
   const router = useRouter()
   const supabase = createClient()
