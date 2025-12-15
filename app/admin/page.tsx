@@ -9,12 +9,10 @@ import { LogOut, Plus, Package, ShoppingCart, ImageIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
 
-// Force dynamic rendering (no pre-rendering during build)
-export const dynamic = 'force-dynamic'
-
 export default function AdminPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const [mounted, setMounted] = useState(false)
+  const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null)
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeTab, setActiveTab] = useState<"orders" | "products" | "carousel">("orders")
@@ -108,6 +106,13 @@ export default function AdminPage() {
   })
 
   useEffect(() => {
+    setMounted(true)
+    setSupabase(createClient())
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+
     const checkAuth = async () => {
       const {
         data: { session },
@@ -116,7 +121,7 @@ export default function AdminPage() {
       setLoading(false)
     }
     checkAuth()
-  }, [supabase.auth])
+  }, [supabase])
 
   const handleLogin = async () => {
     setLoading(true)
@@ -216,7 +221,7 @@ export default function AdminPage() {
     })
   }
 
-  if (loading) {
+  if (!mounted || !supabase || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-gray-500">Cargando...</p>
