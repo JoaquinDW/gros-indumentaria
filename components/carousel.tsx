@@ -72,7 +72,7 @@ export function Carousel({ slides }: CarouselProps) {
               <h2 className="text-4xl md:text-6xl font-bold font-serif mb-4 text-balance">{s.title}</h2>
               {s.description && <p className="text-lg md:text-2xl mb-8">{s.description}</p>}
               {s.cta_text && s.cta_link && (
-                <Link href={s.cta_link}>
+                <Link key={`cta-${s.id}`} href={s.cta_link}>
                   <Button
                     size="lg"
                     style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { use, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { ChevronLeft, ShoppingCart, MessageCircle } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 import { useRouter } from "next/navigation"
+import { AlertModal } from "@/components/ui/alert-modal"
 
 // Mock product data - will be fetched from Supabase
 const productData: Record<number, any> = {
@@ -72,8 +73,9 @@ const productData: Record<number, any> = {
   },
 }
 
-export default function ProductDetail({ params }: { params: { id: string } }) {
-  const productId = Number.parseInt(params.id)
+export default function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const productId = Number.parseInt(id)
   const product = productData[productId] || productData[1]
   const router = useRouter()
 
@@ -83,10 +85,27 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
   const [quantity, setQuantity] = useState(1)
   const [customText, setCustomText] = useState("")
   const { addItem } = useCart()
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean
+    message: string
+    type: "success" | "error" | "info"
+    actionButton?: {
+      label: string
+      onClick: () => void
+    }
+  }>({
+    isOpen: false,
+    message: "",
+    type: "info",
+  })
 
   const handleAddToCart = () => {
     if (!selectedSize) {
-      alert("Por favor selecciona un talle")
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor selecciona un talle",
+        type: "error",
+      })
       return
     }
     addItem({
@@ -100,8 +119,15 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
       image: product.images[0],
     })
 
-    alert("Producto agregado al carrito")
-    router.push("/carrito")
+    setAlertModal({
+      isOpen: true,
+      message: "Producto agregado al carrito exitosamente",
+      type: "success",
+      actionButton: {
+        label: "Ir al Carrito",
+        onClick: () => router.push("/carrito"),
+      },
+    })
   }
 
   return (
@@ -319,6 +345,15 @@ export default function ProductDetail({ params }: { params: { id: string } }) {
           <p style={{ color: "#999999" }}>Prendas Personalizadas de Calidad</p>
         </div>
       </footer>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        message={alertModal.message}
+        type={alertModal.type}
+        actionButton={alertModal.actionButton}
+      />
     </div>
   )
 }

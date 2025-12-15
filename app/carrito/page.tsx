@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Trash2, ShoppingCart } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
+import { Navbar } from "@/components/navbar"
 
 export default function CartPage() {
   const router = useRouter()
@@ -28,11 +29,9 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background">
+        <Navbar />
         <header className="bg-gros-red text-white py-8 px-4 md:px-8">
           <div className="max-w-7xl mx-auto">
-            <Link href="/" className="text-sm text-gray-200 hover:text-white mb-4 inline-block">
-              ← Volver al inicio
-            </Link>
             <h1 className="text-4xl font-bold font-serif">Mi Carrito</h1>
           </div>
         </header>
@@ -60,12 +59,10 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Navbar />
       {/* Header */}
       <header className="bg-gros-red text-white py-8 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
-          <Link href="/clubes" className="text-sm text-gray-200 hover:text-white mb-4 inline-block">
-            ← Volver al catálogo
-          </Link>
           <h1 className="text-4xl font-bold font-serif">Mi Carrito</h1>
         </div>
       </header>
@@ -157,12 +154,17 @@ export default function CartPage() {
                 </Link>
               </div>
 
-              <div className="mt-6 p-4 bg-gros-sand rounded text-sm text-gray-700">
-                <p className="font-bold mb-2">Opciones de pago:</p>
-                <ul className="space-y-1">
-                  <li>✓ Mercado Pago</li>
-                  <li>✓ WhatsApp</li>
-                </ul>
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="font-bold mb-3 text-gros-black">Pagar directamente:</p>
+                <Button
+                  onClick={() => router.push("/checkout")}
+                  className="w-full bg-blue-500 text-white hover:bg-blue-600 font-bold h-12 mb-2"
+                >
+                  Pagar con Mercado Pago
+                </Button>
+                <p className="text-xs text-gray-500 text-center">
+                  Completarás tus datos en el siguiente paso
+                </p>
               </div>
             </Card>
           </div>

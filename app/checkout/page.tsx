@@ -10,11 +10,21 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useCart } from "@/hooks/use-cart"
 import { ArrowRight, Loader2 } from "lucide-react"
+import { AlertModal } from "@/components/ui/alert-modal"
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, total, clearCart } = useCart()
   const [loading, setLoading] = useState(false)
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean
+    message: string
+    type: "success" | "error" | "info"
+  }>({
+    isOpen: false,
+    message: "",
+    type: "info",
+  })
 
   const [formData, setFormData] = useState({
     name: "",
@@ -34,7 +44,11 @@ export default function CheckoutPage() {
 
   const handleCheckout = async (method: "mercadopago" | "whatsapp") => {
     if (!formData.name || !formData.email || !formData.phone) {
-      alert("Por favor completa todos los campos requeridos")
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor completa todos los campos requeridos",
+        type: "error",
+      })
       return
     }
 
@@ -53,12 +67,32 @@ export default function CheckoutPage() {
         })
 
         const data = await response.json()
+
+        if (!response.ok) {
+          setAlertModal({
+            isOpen: true,
+            message: data.error || "Error al procesar el pago",
+            type: "error",
+          })
+          return
+        }
+
         if (data.redirectUrl) {
           window.location.href = data.redirectUrl
+        } else {
+          setAlertModal({
+            isOpen: true,
+            message: "No se pudo obtener la URL de pago",
+            type: "error",
+          })
         }
       } catch (error) {
         console.error("Error:", error)
-        alert("Error al procesar el pago")
+        setAlertModal({
+          isOpen: true,
+          message: "Error al procesar el pago",
+          type: "error",
+        })
       } finally {
         setLoading(false)
       }
@@ -205,7 +239,8 @@ export default function CheckoutPage() {
                 <Button
                   onClick={() => handleCheckout("mercadopago")}
                   disabled={loading}
-                  className="w-full bg-gros-red text-white hover:bg-gros-maroon font-bold h-12"
+                  className="w-full bg-[#C41E3A] text-white hover:bg-[#8B1538] font-bold h-12 text-base"
+                  style={{ backgroundColor: loading ? '#999' : '#C41E3A' }}
                 >
                   {loading ? (
                     <>
@@ -220,19 +255,10 @@ export default function CheckoutPage() {
                   )}
                 </Button>
 
-                <Button
-                  onClick={() => handleCheckout("whatsapp")}
-                  disabled={loading}
-                  variant="outline"
-                  className="w-full font-bold h-12 border-green-500 text-green-500 hover:bg-green-50"
-                >
-                  Finalizar por WhatsApp
-                </Button>
-
                 <Link href="/carrito" className="block">
                   <Button
                     variant="outline"
-                    className="w-full font-bold h-12 border-gray-300 text-gray-700 bg-transparent"
+                    className="w-full font-bold h-12 border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
                   >
                     Volver al Carrito
                   </Button>
@@ -250,6 +276,14 @@ export default function CheckoutPage() {
           <p className="text-gray-400">Prendas Personalizadas de Calidad</p>
         </div>
       </footer>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   )
 }

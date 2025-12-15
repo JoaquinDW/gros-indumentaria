@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { LogOut, Plus, Package, ShoppingCart, ImageIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { AlertModal } from "@/components/ui/alert-modal"
 
 export default function AdminPage() {
   const router = useRouter()
@@ -17,6 +18,15 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean
+    message: string
+    type: "success" | "error" | "info"
+  }>({
+    isOpen: false,
+    message: "",
+    type: "info",
+  })
 
   // Mock data
   const [orders, setOrders] = useState([
@@ -113,7 +123,11 @@ export default function AdminPage() {
     })
 
     if (error) {
-      alert("Error: " + error.message)
+      setAlertModal({
+        isOpen: true,
+        message: "Error: " + error.message,
+        type: "error",
+      })
     } else {
       setIsLoggedIn(true)
       setEmail("")
@@ -133,7 +147,11 @@ export default function AdminPage() {
 
   const addProduct = () => {
     if (!newProduct.name || !newProduct.category || newProduct.price <= 0) {
-      alert("Por favor completa todos los campos")
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor completa todos los campos",
+        type: "error",
+      })
       return
     }
     setProducts([
@@ -153,7 +171,11 @@ export default function AdminPage() {
 
   const addCarouselImage = () => {
     if (!newCarouselImage.title || !newCarouselImage.image_url) {
-      alert("Por favor completa título e imagen")
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor completa título e imagen",
+        type: "error",
+      })
       return
     }
     setCarouselImages([
@@ -622,6 +644,14 @@ export default function AdminPage() {
           )}
         </div>
       </section>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   )
 }

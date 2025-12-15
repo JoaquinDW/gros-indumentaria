@@ -12,10 +12,10 @@ export function Navbar() {
   const cartCount = items.length
 
   const navLinks = [
-    { label: "Inicio", href: "/" },
-    { label: "Clubes", href: "/clubes" },
-    { label: "Productos", href: "/clubes" },
-    { label: "Contacto", href: "/contacto" },
+    { id: "inicio", label: "Inicio", href: "/" },
+    { id: "clubes", label: "Clubes", href: "/clubes" },
+    { id: "productos", label: "Productos", href: "/clubes" },
+    { id: "contacto", label: "Contacto", href: "/contacto" },
   ]
 
   return (
@@ -36,7 +36,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
               <Link
-                key={link.href}
+                key={link.id}
                 href={link.href}
                 className="font-bold transition hover:opacity-70"
                 style={{ color: "var(--gros-black)" }}
@@ -79,7 +79,7 @@ export function Navbar() {
           <div className="md:hidden pb-4 space-y-2" style={{ borderTop: "1px solid var(--border)" }}>
             {navLinks.map((link) => (
               <Link
-                key={link.href}
+                key={link.id}
                 href={link.href}
                 className="block px-4 py-2 rounded font-bold transition hover:opacity-70"
                 style={{ color: "var(--gros-black)" }}

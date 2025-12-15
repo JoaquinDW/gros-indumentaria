@@ -6,12 +6,13 @@ import { Card } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
 import { Carousel } from "@/components/carousel"
 
-export default async function Home() {
+export default function Home() {
   const carouselSlides = [
     {
       id: 1,
       title: "Prendas Personalizadas",
-      description: "Gráfica textil, sublimación y confección para clubes y particulares",
+      description:
+        "Gráfica textil, sublimación y confección para clubes y particulares",
       image_url: "/remera-deportiva-personalizada.jpg",
       cta_text: "Ver Catálogo",
       cta_link: "/clubes",
@@ -58,19 +59,31 @@ export default async function Home() {
   ]
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--gros-white)" }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: "var(--gros-white)" }}
+    >
       <Navbar />
 
       <Carousel slides={carouselSlides} />
 
       {/* Featured Products Section */}
-      <section className="py-20 px-4 md:px-8" style={{ backgroundColor: "var(--gros-white)" }}>
+      <section
+        className="py-20 px-4 md:px-8"
+        style={{ backgroundColor: "var(--gros-white)" }}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold font-serif mb-4" style={{ color: "var(--gros-black)" }}>
+            <h2
+              className="text-4xl md:text-5xl font-bold font-serif mb-4"
+              style={{ color: "var(--gros-black)" }}
+            >
               Nuestros Productos
             </h2>
-            <div className="h-1 w-24 mx-auto" style={{ backgroundColor: "var(--gros-red)" }}></div>
+            <div
+              className="h-1 w-24 mx-auto"
+              style={{ backgroundColor: "var(--gros-red)" }}
+            ></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -80,9 +93,15 @@ export default async function Home() {
                   className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer group"
                   style={{ backgroundColor: "var(--gros-white)" }}
                 >
-                  <div className="relative overflow-hidden" style={{ backgroundColor: "var(--gros-sand)" }}>
+                  <div
+                    className="relative overflow-hidden"
+                    style={{ backgroundColor: "var(--gros-sand)" }}
+                  >
                     <img
-                      src={product.image || "/placeholder.svg?height=256&width=256&query=product"}
+                      src={
+                        product.image ||
+                        "/placeholder.svg?height=256&width=256&query=product"
+                      }
                       alt={product.name}
                       className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
                     />
@@ -95,19 +114,31 @@ export default async function Home() {
                     </div>
                   </div>
                   <div className="p-4">
-                    <p className="text-xs font-bold uppercase mb-2" style={{ color: "var(--gros-blue)" }}>
+                    <p
+                      className="text-xs font-bold uppercase mb-2"
+                      style={{ color: "var(--gros-blue)" }}
+                    >
                       {product.category}
                     </p>
-                    <h3 className="text-lg font-bold mb-3" style={{ color: "var(--gros-black)" }}>
+                    <h3
+                      className="text-lg font-bold mb-3"
+                      style={{ color: "var(--gros-black)" }}
+                    >
                       {product.name}
                     </h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold" style={{ color: "var(--gros-red)" }}>
+                      <span
+                        className="text-2xl font-bold"
+                        style={{ color: "var(--gros-red)" }}
+                      >
                         ${product.price}
                       </span>
                       <Button
                         size="sm"
-                        style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                        style={{
+                          backgroundColor: "var(--gros-red)",
+                          color: "var(--gros-white)",
+                        }}
                         className="hover:opacity-90"
                       >
                         Agregar
@@ -122,7 +153,10 @@ export default async function Home() {
       </section>
 
       {/* Services Section */}
-      <section className="py-20 px-4 md:px-8" style={{ backgroundColor: "var(--gros-sand)" }}>
+      <section
+        className="py-20 px-4 md:px-8"
+        style={{ backgroundColor: "var(--gros-sand)" }}
+      >
         <div className="max-w-7xl mx-auto">
           <h2
             className="text-4xl md:text-5xl font-bold font-serif mb-16 text-center"
@@ -135,19 +169,29 @@ export default async function Home() {
             {[
               {
                 title: "Gráfica Textil",
-                description: "Impresión de alta calidad en cualquier tipo de prenda con colores vibrantes y duraderos.",
+                description:
+                  "Impresión de alta calidad en cualquier tipo de prenda con colores vibrantes y duraderos.",
               },
               {
                 title: "Sublimación",
-                description: "Técnica avanzada para diseños complejos con integración total en las fibras del tejido.",
+                description:
+                  "Técnica avanzada para diseños complejos con integración total en las fibras del tejido.",
               },
               {
                 title: "Confección",
-                description: "Elaboración de prendas personalizadas con costura profesional y acabados de calidad.",
+                description:
+                  "Elaboración de prendas personalizadas con costura profesional y acabados de calidad.",
               },
             ].map((service, idx) => (
-              <div key={idx} className="p-8 rounded-lg shadow-md" style={{ backgroundColor: "var(--gros-white)" }}>
-                <h3 className="text-2xl font-bold mb-4 font-serif" style={{ color: "var(--gros-red)" }}>
+              <div
+                key={idx}
+                className="p-8 rounded-lg shadow-md"
+                style={{ backgroundColor: "var(--gros-white)" }}
+              >
+                <h3
+                  className="text-2xl font-bold mb-4 font-serif"
+                  style={{ color: "var(--gros-red)" }}
+                >
                   {service.title}
                 </h3>
                 <p style={{ color: "#666666" }}>{service.description}</p>
@@ -158,16 +202,25 @@ export default async function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 px-4 md:px-8 text-white" style={{ backgroundColor: "var(--gros-red)" }}>
+      <section
+        className="py-16 px-4 md:px-8 text-white"
+        style={{ backgroundColor: "var(--gros-red)" }}
+      >
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold font-serif mb-6">¿Sos un Club? ¡Hablemos!</h2>
+          <h2 className="text-3xl md:text-4xl font-bold font-serif mb-6">
+            ¿Sos un Club? ¡Hablemos!
+          </h2>
           <p className="text-lg mb-8">
-            Ofertas especiales para pedidos al por mayor y paquetes personalizados para tu club.
+            Ofertas especiales para pedidos al por mayor y paquetes
+            personalizados para tu club.
           </p>
           <Link href="/contacto">
             <Button
               size="lg"
-              style={{ backgroundColor: "var(--gros-white)", color: "var(--gros-red)" }}
+              style={{
+                backgroundColor: "var(--gros-white)",
+                color: "var(--gros-red)",
+              }}
               className="font-bold hover:opacity-90"
             >
               Solicitar Presupuesto
@@ -177,7 +230,10 @@ export default async function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 md:px-8 text-white" style={{ backgroundColor: "var(--gros-black)" }}>
+      <footer
+        className="py-8 px-4 md:px-8 text-white"
+        style={{ backgroundColor: "var(--gros-black)" }}
+      >
         <div className="max-w-7xl mx-auto text-center">
           <p className="mb-2">Gros Indumentaria © 2025</p>
           <p style={{ color: "#999999" }}>Prendas Personalizadas de Calidad</p>
