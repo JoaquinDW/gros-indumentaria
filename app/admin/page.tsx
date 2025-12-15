@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { LogOut, Plus, Package, ShoppingCart, ImageIcon } from "lucide-react"
+import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
 
@@ -15,7 +15,7 @@ export default function AdminPage() {
   const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null)
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "carousel">("orders")
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "categories" | "carousel">("orders")
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -105,6 +105,15 @@ export default function AdminPage() {
     cta_link: "",
   })
 
+  const [categories, setCategories] = useState<any[]>([])
+  const [newCategory, setNewCategory] = useState({
+    name: "",
+    description: "",
+    image_url: "",
+    order_index: 0,
+  })
+  const [editingCategory, setEditingCategory] = useState<number | null>(null)
+
   useEffect(() => {
     setMounted(true)
     setSupabase(createClient())
@@ -122,6 +131,24 @@ export default function AdminPage() {
     }
     checkAuth()
   }, [supabase])
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadCategories()
+    }
+  }, [isLoggedIn])
+
+  const loadCategories = async () => {
+    try {
+      const response = await fetch("/api/categories")
+      const data = await response.json()
+      if (data.categories) {
+        setCategories(data.categories)
+      }
+    } catch (error) {
+      console.error("Error loading categories:", error)
+    }
+  }
 
   const handleLogin = async () => {
     setLoading(true)
@@ -221,6 +248,150 @@ export default function AdminPage() {
     })
   }
 
+  const addCategory = async () => {
+    if (!newCategory.name) {
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor completa el nombre de la categoría",
+        type: "error",
+      })
+      return
+    }
+
+    try {
+      const response = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCategory),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al crear categoría")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Categoría creada exitosamente",
+        type: "success",
+      })
+      setNewCategory({ name: "", description: "", image_url: "", order_index: 0 })
+      loadCategories()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al crear categoría",
+        type: "error",
+      })
+    }
+  }
+
+  const updateCategory = async (id: number) => {
+    try {
+      const response = await fetch(`/api/categories/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCategory),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al actualizar categoría")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Categoría actualizada exitosamente",
+        type: "success",
+      })
+      setNewCategory({ name: "", description: "", image_url: "", order_index: 0 })
+      setEditingCategory(null)
+      loadCategories()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al actualizar categoría",
+        type: "error",
+      })
+    }
+  }
+
+  const deleteCategory = async (id: number) => {
+    if (!confirm("¿Estás seguro de eliminar esta categoría?")) return
+
+    try {
+      const response = await fetch(`/api/categories/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Error al eliminar categoría")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Categoría eliminada exitosamente",
+        type: "success",
+      })
+      loadCategories()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al eliminar categoría",
+        type: "error",
+      })
+    }
+  }
+
+  const startEditCategory = (category: any) => {
+    setEditingCategory(category.id)
+    setNewCategory({
+      name: category.name,
+      description: category.description || "",
+      image_url: category.image_url || "",
+      order_index: category.order_index || 0,
+    })
+  }
+
+  const cancelEditCategory = () => {
+    setEditingCategory(null)
+    setNewCategory({ name: "", description: "", image_url: "", order_index: 0 })
+  }
+
+  const updateCategoryOrder = async (categoryId: number, direction: "up" | "down") => {
+    const index = categories.findIndex((cat) => cat.id === categoryId)
+    if (direction === "up" && index > 0) {
+      const newOrder = categories[index - 1].order_index
+      await fetch(`/api/categories/${categoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: newOrder }),
+      })
+      await fetch(`/api/categories/${categories[index - 1].id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: categories[index].order_index }),
+      })
+      loadCategories()
+    } else if (direction === "down" && index < categories.length - 1) {
+      const newOrder = categories[index + 1].order_index
+      await fetch(`/api/categories/${categoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: newOrder }),
+      })
+      await fetch(`/api/categories/${categories[index + 1].id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: categories[index].order_index }),
+      })
+      loadCategories()
+    }
+  }
+
   if (!mounted || !supabase || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -318,6 +489,17 @@ export default function AdminPage() {
           >
             <Package className="h-5 w-5 inline mr-2" />
             Productos
+          </button>
+          <button
+            onClick={() => setActiveTab("categories")}
+            className={`py-4 px-2 font-bold border-b-2 transition`}
+            style={{
+              borderBottomColor: activeTab === "categories" ? "var(--gros-red)" : "transparent",
+              color: activeTab === "categories" ? "var(--gros-red)" : "#666666",
+            }}
+          >
+            <Folder className="h-5 w-5 inline mr-2" />
+            Categorías
           </button>
           <button
             onClick={() => setActiveTab("carousel")}
@@ -428,10 +610,13 @@ export default function AdminPage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded"
                       >
                         <option value="">Selecciona categoría</option>
-                        <option value="Remeras">Remeras</option>
-                        <option value="Buzos">Buzos</option>
-                        <option value="Calzas">Calzas</option>
-                        <option value="Camperas">Camperas</option>
+                        {categories
+                          .filter((cat) => cat.active)
+                          .map((category) => (
+                            <option key={category.id} value={category.name}>
+                              {category.name}
+                            </option>
+                          ))}
                       </select>
                     </div>
                     <div>
@@ -503,6 +688,172 @@ export default function AdminPage() {
                           </Button>
                           <Button
                             onClick={() => deleteProduct(product.id)}
+                            variant="outline"
+                            className="border-red-500 text-red-500 hover:bg-red-50"
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "categories" && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
+                  {editingCategory ? "Editar Categoría" : "Agregar Nueva Categoría"}
+                </h2>
+
+                <Card className="p-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Nombre
+                      </label>
+                      <Input
+                        value={newCategory.name}
+                        onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                        placeholder="Nombre de la categoría"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Orden
+                      </label>
+                      <Input
+                        type="number"
+                        value={newCategory.order_index}
+                        onChange={(e) =>
+                          setNewCategory({
+                            ...newCategory,
+                            order_index: Number.parseInt(e.target.value),
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                      Descripción (Opcional)
+                    </label>
+                    <Input
+                      value={newCategory.description}
+                      onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                      placeholder="Descripción de la categoría"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                      URL de Imagen (Opcional)
+                    </label>
+                    <Input
+                      value={newCategory.image_url}
+                      onChange={(e) => setNewCategory({ ...newCategory, image_url: e.target.value })}
+                      placeholder="https://ejemplo.com/imagen.jpg"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    {editingCategory ? (
+                      <>
+                        <Button
+                          onClick={() => updateCategory(editingCategory)}
+                          className="hover:opacity-90 font-bold"
+                          style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                        >
+                          Actualizar Categoría
+                        </Button>
+                        <Button
+                          onClick={cancelEditCategory}
+                          variant="outline"
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        onClick={addCategory}
+                        className="hover:opacity-90 font-bold"
+                        style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                      >
+                        <Plus className="mr-2 h-5 w-5" />
+                        Agregar Categoría
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
+                  Categorías Actuales
+                </h2>
+
+                <div className="space-y-4">
+                  {categories.map((category, idx) => (
+                    <Card key={category.id} className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">NOMBRE</p>
+                          <p className="font-bold" style={{ color: "var(--gros-black)" }}>
+                            {category.name}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">DESCRIPCIÓN</p>
+                          <p className="text-sm" style={{ color: "var(--gros-black)" }}>
+                            {category.description || "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">ORDEN</p>
+                          <p className="font-bold" style={{ color: "var(--gros-red)" }}>
+                            {category.order_index}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">ESTADO</p>
+                          <p className="font-bold text-green-600">{category.active ? "Activa" : "Inactiva"}</p>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              onClick={() => updateCategoryOrder(category.id, "up")}
+                              disabled={idx === 0}
+                              className="hover:opacity-90"
+                              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                            >
+                              ↑
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => updateCategoryOrder(category.id, "down")}
+                              disabled={idx === categories.length - 1}
+                              className="hover:opacity-90"
+                              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                            >
+                              ↓
+                            </Button>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => startEditCategory(category)}
+                            variant="outline"
+                            className="border-gros-red text-gros-red hover:bg-gros-red/10 bg-transparent"
+                            style={{ borderColor: "var(--gros-red)", color: "var(--gros-red)" }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => deleteCategory(category.id)}
                             variant="outline"
                             className="border-red-500 text-red-500 hover:bg-red-50"
                           >
