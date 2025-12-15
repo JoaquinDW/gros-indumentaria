@@ -74,21 +74,27 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden pb-4 space-y-2" style={{ borderTop: "1px solid var(--border)" }}>
+        {/* Mobile Navigation - Full Screen Overlay */}
+        <div
+          className={`fixed inset-0 bg-white z-40 md:hidden transition-transform duration-300 ease-in-out ${
+            isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          style={{ top: "65px" }}
+        >
+          <div className="flex flex-col h-full px-8 py-12 space-y-6">
             {navLinks.map((link) => (
               <Link
                 key={link.id}
                 href={link.href}
-                className="block px-4 py-2 rounded font-bold transition hover:opacity-70"
-                style={{ color: "var(--gros-black)" }}
+                onClick={() => setIsOpen(false)}
+                className="text-2xl font-bold transition hover:opacity-70 border-b pb-4"
+                style={{ color: "var(--gros-black)", borderColor: "var(--border)" }}
               >
                 {link.label}
               </Link>
             ))}
           </div>
-        )}
+        </div>
       </div>
     </nav>
   )
