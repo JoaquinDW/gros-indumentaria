@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -11,60 +11,40 @@ import { Navbar } from "@/components/navbar"
 export default function ClubPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
+  const [products, setProducts] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock products - will be fetched from Supabase later
-  const products = [
-    {
-      id: 1,
-      name: "Remera Premium",
-      category: "Remeras",
-      price: 450,
-      image: "/remera-deportiva-personalizada.jpg",
-      description: "Remera de algodón 100% personalizable",
-    },
-    {
-      id: 2,
-      name: "Remera Deportiva",
-      category: "Remeras",
-      price: 520,
-      image: "/remera-deportiva-personalizada.jpg",
-      description: "Remera técnica con tela respirable",
-    },
-    {
-      id: 3,
-      name: "Buzo Deportivo",
-      category: "Buzos",
-      price: 890,
-      image: "/buzo-deportivo-personalizado.jpg",
-      description: "Buzo premium con cierre y bolsillos",
-    },
-    {
-      id: 4,
-      name: "Buzo Clásico",
-      category: "Buzos",
-      price: 750,
-      image: "/buzo-deportivo-personalizado.jpg",
-      description: "Buzo cómodo y versátil",
-    },
-    {
-      id: 5,
-      name: "Calza Premium",
-      category: "Calzas",
-      price: 650,
-      image: "/calza-deportiva-personalizada.jpg",
-      description: "Calza deportiva con cintura alta",
-    },
-    {
-      id: 6,
-      name: "Campera Club",
-      category: "Camperas",
-      price: 1290,
-      image: "/campera-club-personalizada.jpg",
-      description: "Campera de calidad premium para clubes",
-    },
-  ]
+  useEffect(() => {
+    loadProducts()
+    loadCategories()
+  }, [])
 
-  const categories = ["Remeras", "Buzos", "Calzas", "Camperas"]
+  const loadProducts = async () => {
+    try {
+      const response = await fetch("/api/products")
+      const data = await response.json()
+      if (data.products) {
+        setProducts(data.products)
+      }
+    } catch (error) {
+      console.error("Error loading products:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadCategories = async () => {
+    try {
+      const response = await fetch("/api/categories")
+      const data = await response.json()
+      if (data.categories) {
+        setCategories(data.categories.filter((cat: any) => cat.active))
+      }
+    } catch (error) {
+      console.error("Error loading categories:", error)
+    }
+  }
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -116,17 +96,17 @@ export default function ClubPage() {
             </Button>
             {categories.map((category) => (
               <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                onClick={() => setSelectedCategory(category)}
+                key={category.id}
+                variant={selectedCategory === category.name ? "default" : "outline"}
+                onClick={() => setSelectedCategory(category.name)}
                 style={
-                  selectedCategory === category
+                  selectedCategory === category.name
                     ? { backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }
                     : {}
                 }
                 className="hover:opacity-90"
               >
-                {category}
+                {category.name}
               </Button>
             ))}
           </div>
@@ -136,10 +116,18 @@ export default function ClubPage() {
       {/* Products Grid */}
       <section className="py-12 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
-          {filteredProducts.length === 0 ? (
+          {loading ? (
             <div className="text-center py-12">
               <p className="text-lg" style={{ color: "#666666" }}>
-                No hay productos que coincidan con tu búsqueda
+                Cargando productos...
+              </p>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-lg" style={{ color: "#666666" }}>
+                {products.length === 0
+                  ? "No hay productos disponibles en este momento"
+                  : "No hay productos que coincidan con tu búsqueda"}
               </p>
             </div>
           ) : (
@@ -152,7 +140,7 @@ export default function ClubPage() {
                   >
                     <div className="relative overflow-hidden" style={{ backgroundColor: "var(--gros-sand)" }}>
                       <img
-                        src={product.image || "/placeholder.svg?height=256&width=256&query=product"}
+                        src={product.image_url || "/placeholder.svg?height=256&width=256&query=product"}
                         alt={product.name}
                         className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
                       />
@@ -171,7 +159,7 @@ export default function ClubPage() {
                         {product.name}
                       </h3>
                       <p className="text-sm mb-4" style={{ color: "#666666" }}>
-                        {product.description}
+                        {product.description || "Producto personalizable de alta calidad"}
                       </p>
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-bold" style={{ color: "var(--gros-red)" }}>

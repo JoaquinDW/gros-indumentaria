@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -7,6 +8,28 @@ import { Navbar } from "@/components/navbar"
 import { Carousel } from "@/components/carousel"
 
 export default function Home() {
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadProducts()
+  }, [])
+
+  const loadProducts = async () => {
+    try {
+      const response = await fetch("/api/products")
+      const data = await response.json()
+      if (data.products) {
+        // Limit to 4 featured products for the home page
+        setProducts(data.products.slice(0, 4))
+      }
+    } catch (error) {
+      console.error("Error loading products:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const carouselSlides = [
     {
       id: 1,
@@ -24,37 +47,6 @@ export default function Home() {
       image_url: "/buzo-deportivo-personalizado.jpg",
       cta_text: "Explorar",
       cta_link: "/clubes",
-    },
-  ]
-
-  const products = [
-    {
-      id: 1,
-      name: "Remera Premium",
-      category: "Remeras",
-      price: 450,
-      image: "/remera-deportiva-personalizada.jpg",
-    },
-    {
-      id: 2,
-      name: "Buzo Deportivo",
-      category: "Buzos",
-      price: 890,
-      image: "/buzo-deportivo-personalizado.jpg",
-    },
-    {
-      id: 3,
-      name: "Calza Premium",
-      category: "Calzas",
-      price: 650,
-      image: "/calza-deportiva-personalizada.jpg",
-    },
-    {
-      id: 4,
-      name: "Campera Club",
-      category: "Camperas",
-      price: 1290,
-      image: "/campera-club-personalizada.jpg",
     },
   ]
 
@@ -86,69 +78,90 @@ export default function Home() {
             ></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <Link key={product.id} href={`/producto/${product.id}`}>
-                <Card
-                  className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer group"
-                  style={{ backgroundColor: "var(--gros-white)" }}
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Cargando productos...</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">No hay productos disponibles en este momento</p>
+              <Link href="/clubes">
+                <Button
+                  style={{
+                    backgroundColor: "var(--gros-red)",
+                    color: "var(--gros-white)",
+                  }}
+                  className="hover:opacity-90"
                 >
-                  <div
-                    className="relative overflow-hidden"
-                    style={{ backgroundColor: "var(--gros-sand)" }}
-                  >
-                    <img
-                      src={
-                        product.image ||
-                        "/placeholder.svg?height=256&width=256&query=product"
-                      }
-                      alt={product.name}
-                      className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                    {/* Red diagonal banner */}
-                    <div
-                      className="absolute top-4 right-0 text-white px-4 py-2 transform rotate-45 origin-right translate-x-12 text-sm font-bold"
-                      style={{ backgroundColor: "var(--gros-red)" }}
-                    >
-                      PERSONALIZADO
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <p
-                      className="text-xs font-bold uppercase mb-2"
-                      style={{ color: "var(--gros-blue)" }}
-                    >
-                      {product.category}
-                    </p>
-                    <h3
-                      className="text-lg font-bold mb-3"
-                      style={{ color: "var(--gros-black)" }}
-                    >
-                      {product.name}
-                    </h3>
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="text-2xl font-bold"
-                        style={{ color: "var(--gros-red)" }}
-                      >
-                        ${product.price}
-                      </span>
-                      <Button
-                        size="sm"
-                        style={{
-                          backgroundColor: "var(--gros-red)",
-                          color: "var(--gros-white)",
-                        }}
-                        className="hover:opacity-90"
-                      >
-                        Agregar
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+                  Ver Catálogo Completo
+                </Button>
               </Link>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {products.map((product) => (
+                <Link key={product.id} href={`/producto/${product.id}`}>
+                  <Card
+                    className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer group"
+                    style={{ backgroundColor: "var(--gros-white)" }}
+                  >
+                    <div
+                      className="relative overflow-hidden"
+                      style={{ backgroundColor: "var(--gros-sand)" }}
+                    >
+                      <img
+                        src={
+                          product.image_url ||
+                          "/placeholder.svg?height=256&width=256&query=product"
+                        }
+                        alt={product.name}
+                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      {/* Red diagonal banner */}
+                      <div
+                        className="absolute top-4 right-0 text-white px-4 py-2 transform rotate-45 origin-right translate-x-12 text-sm font-bold"
+                        style={{ backgroundColor: "var(--gros-red)" }}
+                      >
+                        PERSONALIZADO
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <p
+                        className="text-xs font-bold uppercase mb-2"
+                        style={{ color: "var(--gros-blue)" }}
+                      >
+                        {product.category}
+                      </p>
+                      <h3
+                        className="text-lg font-bold mb-3"
+                        style={{ color: "var(--gros-black)" }}
+                      >
+                        {product.name}
+                      </h3>
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="text-2xl font-bold"
+                          style={{ color: "var(--gros-red)" }}
+                        >
+                          ${product.price}
+                        </span>
+                        <Button
+                          size="sm"
+                          style={{
+                            backgroundColor: "var(--gros-red)",
+                            color: "var(--gros-white)",
+                          }}
+                          className="hover:opacity-90"
+                        >
+                          Agregar
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

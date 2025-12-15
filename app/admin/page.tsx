@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
+import { ImageUpload } from "@/components/ui/image-upload"
 
 export default function AdminPage() {
   const router = useRouter()
@@ -51,22 +52,7 @@ export default function AdminPage() {
     },
   ])
 
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: "Remera Premium",
-      category: "Remeras",
-      price: 450,
-      active: true,
-    },
-    {
-      id: 2,
-      name: "Buzo Deportivo",
-      category: "Buzos",
-      price: 890,
-      active: true,
-    },
-  ])
+  const [products, setProducts] = useState<any[]>([])
 
   const [carouselImages, setCarouselImages] = useState([
     {
@@ -94,8 +80,15 @@ export default function AdminPage() {
   const [newProduct, setNewProduct] = useState({
     name: "",
     category: "",
+    description: "",
     price: 0,
+    image_url: "",
+    sizes: [] as string[],
+    colors: [] as string[],
+    lead_time: "7-10 días",
+    active: true,
   })
+  const [editingProduct, setEditingProduct] = useState<number | null>(null)
 
   const [newCarouselImage, setNewCarouselImage] = useState({
     title: "",
@@ -135,6 +128,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (isLoggedIn) {
       loadCategories()
+      loadProducts()
     }
   }, [isLoggedIn])
 
@@ -147,6 +141,18 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error("Error loading categories:", error)
+    }
+  }
+
+  const loadProducts = async () => {
+    try {
+      const response = await fetch("/api/products")
+      const data = await response.json()
+      if (data.products) {
+        setProducts(data.products)
+      }
+    } catch (error) {
+      console.error("Error loading products:", error)
     }
   }
 
@@ -180,28 +186,180 @@ export default function AdminPage() {
     setOrders(orders.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)))
   }
 
-  const addProduct = () => {
+  const addProduct = async () => {
     if (!newProduct.name || !newProduct.category || newProduct.price <= 0) {
       setAlertModal({
         isOpen: true,
-        message: "Por favor completa todos los campos",
+        message: "Por favor completa todos los campos requeridos",
         type: "error",
       })
       return
     }
-    setProducts([
-      ...products,
-      {
-        id: products.length + 1,
-        ...newProduct,
+
+    try {
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newProduct),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al crear producto")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Producto creado exitosamente",
+        type: "success",
+      })
+      setNewProduct({
+        name: "",
+        category: "",
+        description: "",
+        price: 0,
+        image_url: "",
+        sizes: [],
+        colors: [],
+        lead_time: "7-10 días",
         active: true,
-      },
-    ])
-    setNewProduct({ name: "", category: "", price: 0 })
+      })
+      loadProducts()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al crear producto",
+        type: "error",
+      })
+    }
   }
 
-  const deleteProduct = (productId: number) => {
-    setProducts(products.filter((p) => p.id !== productId))
+  const updateProduct = async (id: number) => {
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newProduct),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al actualizar producto")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Producto actualizado exitosamente",
+        type: "success",
+      })
+      setNewProduct({
+        name: "",
+        category: "",
+        description: "",
+        price: 0,
+        image_url: "",
+        sizes: [],
+        colors: [],
+        lead_time: "7-10 días",
+        active: true,
+      })
+      setEditingProduct(null)
+      loadProducts()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al actualizar producto",
+        type: "error",
+      })
+    }
+  }
+
+  const deleteProduct = async (id: number) => {
+    if (!confirm("¿Estás seguro de eliminar este producto?")) return
+
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Error al eliminar producto")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Producto eliminado exitosamente",
+        type: "success",
+      })
+      loadProducts()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al eliminar producto",
+        type: "error",
+      })
+    }
+  }
+
+  const startEditProduct = (product: any) => {
+    setEditingProduct(product.id)
+    setNewProduct({
+      name: product.name,
+      category: product.category,
+      description: product.description || "",
+      price: product.price,
+      image_url: product.image_url || "",
+      sizes: product.sizes || [],
+      colors: product.colors || [],
+      lead_time: product.lead_time || "7-10 días",
+      active: product.active !== undefined ? product.active : true,
+    })
+  }
+
+  const cancelEditProduct = () => {
+    setEditingProduct(null)
+    setNewProduct({
+      name: "",
+      category: "",
+      description: "",
+      price: 0,
+      image_url: "",
+      sizes: [],
+      colors: [],
+      lead_time: "7-10 días",
+      active: true,
+    })
+  }
+
+  const toggleProductActive = async (id: number, currentActive: boolean) => {
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !currentActive }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Error al actualizar estado del producto")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: `Producto ${!currentActive ? "activado" : "desactivado"} exitosamente`,
+        type: "success",
+      })
+      loadProducts()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al actualizar estado",
+        type: "error",
+      })
+    }
   }
 
   const addCarouselImage = () => {
@@ -580,14 +738,14 @@ export default function AdminPage() {
             <div className="space-y-8">
               <div>
                 <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  Agregar Nuevo Producto
+                  {editingProduct ? "Editar Producto" : "Agregar Nuevo Producto"}
                 </h2>
 
                 <Card className="p-6 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Nombre
+                        Nombre *
                       </label>
                       <Input
                         value={newProduct.name}
@@ -597,7 +755,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Categoría
+                        Categoría *
                       </label>
                       <select
                         value={newProduct.category}
@@ -621,7 +779,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Precio
+                        Precio *
                       </label>
                       <Input
                         type="number"
@@ -636,67 +794,176 @@ export default function AdminPage() {
                       />
                     </div>
                   </div>
-                  <Button
-                    onClick={addProduct}
-                    className="hover:opacity-90 font-bold"
-                    style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                  >
-                    <Plus className="mr-2 h-5 w-5" />
-                    Agregar Producto
-                  </Button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Descripción
+                      </label>
+                      <textarea
+                        value={newProduct.description}
+                        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                        placeholder="Descripción del producto"
+                        className="w-full px-3 py-2 border border-gray-300 rounded min-h-[80px]"
+                      />
+                    </div>
+                    <div>
+                      <ImageUpload
+                        label="Imagen del Producto"
+                        value={newProduct.image_url}
+                        onChange={(url) => setNewProduct({ ...newProduct, image_url: url })}
+                        onRemove={() => setNewProduct({ ...newProduct, image_url: "" })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Talles (separados por coma)
+                      </label>
+                      <Input
+                        value={newProduct.sizes.join(", ")}
+                        onChange={(e) =>
+                          setNewProduct({
+                            ...newProduct,
+                            sizes: e.target.value.split(",").map((s) => s.trim()).filter((s) => s),
+                          })
+                        }
+                        placeholder="S, M, L, XL"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Colores (separados por coma)
+                      </label>
+                      <Input
+                        value={newProduct.colors.join(", ")}
+                        onChange={(e) =>
+                          setNewProduct({
+                            ...newProduct,
+                            colors: e.target.value.split(",").map((c) => c.trim()).filter((c) => c),
+                          })
+                        }
+                        placeholder="Negro, Blanco, Azul"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Tiempo de Entrega
+                      </label>
+                      <Input
+                        value={newProduct.lead_time}
+                        onChange={(e) => setNewProduct({ ...newProduct, lead_time: e.target.value })}
+                        placeholder="7-10 días"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={newProduct.active}
+                        onChange={(e) => setNewProduct({ ...newProduct, active: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm font-bold" style={{ color: "var(--gros-black)" }}>
+                        Producto Activo
+                      </span>
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={editingProduct ? () => updateProduct(editingProduct) : addProduct}
+                      className="hover:opacity-90 font-bold"
+                      style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                    >
+                      <Plus className="mr-2 h-5 w-5" />
+                      {editingProduct ? "Actualizar Producto" : "Agregar Producto"}
+                    </Button>
+                    {editingProduct && (
+                      <Button
+                        onClick={cancelEditProduct}
+                        variant="outline"
+                        className="font-bold"
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                  </div>
                 </Card>
               </div>
 
               <div>
                 <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  Productos Actuales
+                  Productos Actuales ({products.length})
                 </h2>
 
                 <div className="space-y-4">
-                  {products.map((product) => (
-                    <Card key={product.id} className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-                        <div>
-                          <p className="text-xs text-gray-500 font-bold">NOMBRE</p>
-                          <p className="font-bold" style={{ color: "var(--gros-black)" }}>
-                            {product.name}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 font-bold">CATEGORÍA</p>
-                          <p className="font-bold" style={{ color: "var(--gros-black)" }}>
-                            {product.category}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 font-bold">PRECIO</p>
-                          <p className="font-bold text-lg" style={{ color: "var(--gros-red)" }}>
-                            ${product.price}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 font-bold">ESTADO</p>
-                          <p className="font-bold text-green-600">{product.active ? "Activo" : "Inactivo"}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            className="border-gros-red text-gros-red hover:bg-gros-red/10 bg-transparent"
-                            style={{ borderColor: "var(--gros-red)", color: "var(--gros-red)" }}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            onClick={() => deleteProduct(product.id)}
-                            variant="outline"
-                            className="border-red-500 text-red-500 hover:bg-red-50"
-                          >
-                            Eliminar
-                          </Button>
-                        </div>
-                      </div>
+                  {products.length === 0 ? (
+                    <Card className="p-8 text-center">
+                      <p className="text-gray-500">No hay productos registrados</p>
                     </Card>
-                  ))}
+                  ) : (
+                    products.map((product) => (
+                      <Card key={product.id} className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                          <div>
+                            <p className="text-xs text-gray-500 font-bold">NOMBRE</p>
+                            <p className="font-bold" style={{ color: "var(--gros-black)" }}>
+                              {product.name}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-bold">CATEGORÍA</p>
+                            <p className="font-bold" style={{ color: "var(--gros-black)" }}>
+                              {product.category}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-bold">PRECIO</p>
+                            <p className="font-bold text-lg" style={{ color: "var(--gros-red)" }}>
+                              ${product.price}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-bold">ESTADO</p>
+                            <p className={`font-bold ${product.active ? "text-green-600" : "text-gray-400"}`}>
+                              {product.active ? "Activo" : "Inactivo"}
+                            </p>
+                          </div>
+                          <div>
+                            <Button
+                              onClick={() => toggleProductActive(product.id, product.active)}
+                              variant="outline"
+                              className={`w-full ${
+                                product.active
+                                  ? "border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                                  : "border-green-500 text-green-600 hover:bg-green-50"
+                              }`}
+                            >
+                              {product.active ? "Desactivar" : "Activar"}
+                            </Button>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => startEditProduct(product)}
+                              variant="outline"
+                              className="border-gros-red text-gros-red hover:bg-gros-red/10 bg-transparent"
+                              style={{ borderColor: "var(--gros-red)", color: "var(--gros-red)" }}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              onClick={() => deleteProduct(product.id)}
+                              variant="outline"
+                              className="border-red-500 text-red-500 hover:bg-red-50"
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -749,13 +1016,11 @@ export default function AdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                      URL de Imagen (Opcional)
-                    </label>
-                    <Input
+                    <ImageUpload
+                      label="Imagen de la Categoría (Opcional)"
                       value={newCategory.image_url}
-                      onChange={(e) => setNewCategory({ ...newCategory, image_url: e.target.value })}
-                      placeholder="https://ejemplo.com/imagen.jpg"
+                      onChange={(url) => setNewCategory({ ...newCategory, image_url: url })}
+                      onRemove={() => setNewCategory({ ...newCategory, image_url: "" })}
                     />
                   </div>
                   <div className="flex gap-2">
@@ -888,13 +1153,11 @@ export default function AdminPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        URL de Imagen
-                      </label>
-                      <Input
+                      <ImageUpload
+                        label="Imagen del Carrusel"
                         value={newCarouselImage.image_url}
-                        onChange={(e) => setNewCarouselImage({ ...newCarouselImage, image_url: e.target.value })}
-                        placeholder="https://ejemplo.com/imagen.jpg"
+                        onChange={(url) => setNewCarouselImage({ ...newCarouselImage, image_url: url })}
+                        onRemove={() => setNewCarouselImage({ ...newCarouselImage, image_url: "" })}
                       />
                     </div>
                   </div>
