@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -10,78 +10,18 @@ import { useCart } from "@/hooks/use-cart"
 import { useRouter } from "next/navigation"
 import { AlertModal } from "@/components/ui/alert-modal"
 
-// Mock product data - will be fetched from Supabase
-const productData: Record<number, any> = {
-  1: {
-    id: 1,
-    name: "Remera Premium",
-    category: "Remeras",
-    price: 450,
-    description: "Remera de algodón 100% personalizable con impresión de alta calidad.",
-    images: [
-      "/remera-deportiva-personalizada.jpg",
-      "/remera-deportiva-personalizada.jpg",
-      "/remera-deportiva-personalizada.jpg",
-    ],
-    sizes: ["XS", "S", "M", "L", "XL", "XXL"],
-    colors: [
-      { name: "Rojo", hex: "#C43A2F" },
-      { name: "Blanco", hex: "#FFFFFF" },
-      { name: "Negro", hex: "#1A1A1A" },
-      { name: "Azul", hex: "#1E5BAA" },
-    ],
-    leadTime: "7-10 días",
-    description_long: `Remera premium fabricada en algodón 100% puro de la más alta calidad. 
-    
-    Características:
-    • Tela suave y cómoda
-    • Personalización ilimitada
-    • Impresión de larga duración
-    • Disponible en múltiples talles y colores
-    • Perfecto para clubes y eventos
-    
-    Lead time de producción: 7-10 días hábiles.`,
-  },
-  2: {
-    id: 2,
-    name: "Buzo Deportivo",
-    category: "Buzos",
-    price: 890,
-    description: "Buzo deportivo premium con cierre frontal y bolsillos.",
-    images: [
-      "/buzo-deportivo-personalizado.jpg",
-      "/buzo-deportivo-personalizado.jpg",
-      "/buzo-deportivo-personalizado.jpg",
-    ],
-    sizes: ["XS", "S", "M", "L", "XL", "XXL"],
-    colors: [
-      { name: "Rojo", hex: "#C43A2F" },
-      { name: "Blanco", hex: "#FFFFFF" },
-      { name: "Negro", hex: "#1A1A1A" },
-    ],
-    leadTime: "10-14 días",
-    description_long: `Buzo deportivo de calidad excepcional con diseño ergonómico.
-    
-    Características:
-    • Cierre frontal con cordón ajustable
-    • Bolsillos tipo canguro
-    • Puños y cintura elástica
-    • Tela técnica transpirable
-    • Ideal para clubes y equipos
-    
-    Lead time de producción: 10-14 días hábiles.`,
-  },
-}
-
 export default function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const productId = Number.parseInt(id)
-  const product = productData[productId] || productData[1]
   const router = useRouter()
+
+  const [product, setProduct] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedSize, setSelectedSize] = useState("")
-  const [selectedColor, setSelectedColor] = useState(product.colors[0])
+  const [selectedColor, setSelectedColor] = useState<any>(null)
   const [quantity, setQuantity] = useState(1)
   const [customText, setCustomText] = useState("")
   const { addItem } = useCart()
@@ -99,6 +39,66 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
     type: "info",
   })
 
+  useEffect(() => {
+    loadProduct()
+  }, [productId])
+
+  const loadProduct = async () => {
+    try {
+      const response = await fetch("/api/products")
+      const data = await response.json()
+
+      if (data.products) {
+        const foundProduct = data.products.find((p: any) => p.id === productId)
+
+        if (foundProduct) {
+          // Transform colors from array of strings to array of objects with name and hex
+          const transformedProduct = {
+            ...foundProduct,
+            images: foundProduct.image_url ? [foundProduct.image_url] : ["/placeholder.svg"],
+            sizes: foundProduct.sizes || ["S", "M", "L", "XL"],
+            colors: (foundProduct.colors || ["Rojo", "Blanco", "Negro"]).map((colorName: string) => ({
+              name: colorName,
+              hex: getColorHex(colorName)
+            })),
+            leadTime: foundProduct.lead_time || "7-10 días",
+            description_long: foundProduct.description || "Producto de alta calidad personalizable."
+          }
+
+          setProduct(transformedProduct)
+          // Set initial color after product is loaded
+          if (transformedProduct.colors.length > 0) {
+            setSelectedColor(transformedProduct.colors[0])
+          }
+        } else {
+          setNotFound(true)
+        }
+      }
+    } catch (error) {
+      console.error("Error loading product:", error)
+      setNotFound(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Helper function to map color names to hex values
+  const getColorHex = (colorName: string): string => {
+    const colorMap: Record<string, string> = {
+      "Rojo": "#C43A2F",
+      "Blanco": "#FFFFFF",
+      "Negro": "#1A1A1A",
+      "Azul": "#1E5BAA",
+      "Verde": "#2D8A3E",
+      "Amarillo": "#F5C542",
+      "Gris": "#808080",
+      "Rosa": "#E91E63",
+      "Naranja": "#FF6B35",
+      "Violeta": "#9C27B0",
+    }
+    return colorMap[colorName] || "#000000"
+  }
+
   const handleAddToCart = () => {
     if (!selectedSize) {
       setAlertModal({
@@ -114,7 +114,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       price: product.price,
       quantity,
       size: selectedSize,
-      color: selectedColor.name,
+      color: selectedColor?.name || "Sin color",
       customText,
       image: product.images[0],
     })
@@ -128,6 +128,55 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
         onClick: () => router.push("/carrito"),
       },
     })
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div style={{ backgroundColor: "var(--gros-white)" }} className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg" style={{ color: "#666666" }}>Cargando producto...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Not found state
+  if (notFound || !product) {
+    return (
+      <div style={{ backgroundColor: "var(--gros-white)" }} className="min-h-screen">
+        <header className="border-b py-4 px-4 md:px-8" style={{ backgroundColor: "var(--gros-white)" }}>
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <Link
+              href="/clubes"
+              className="flex items-center gap-2 hover:opacity-75"
+              style={{ color: "var(--gros-red)" }}
+            >
+              <ChevronLeft className="h-5 w-5" />
+              Volver al catálogo
+            </Link>
+          </div>
+        </header>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold mb-4" style={{ color: "var(--gros-black)" }}>
+              Producto no encontrado
+            </h1>
+            <p className="text-lg mb-6" style={{ color: "#666666" }}>
+              El producto que buscas no existe o no está disponible.
+            </p>
+            <Link href="/clubes">
+              <Button
+                style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                className="hover:opacity-90"
+              >
+                Ver todos los productos
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -231,7 +280,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               {/* Colors */}
               <div>
                 <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
-                  Color: <span style={{ color: "var(--gros-red)" }}>{selectedColor.name}</span>
+                  Color: <span style={{ color: "var(--gros-red)" }}>{selectedColor?.name || "Selecciona un color"}</span>
                 </label>
                 <div className="flex gap-3">
                   {product.colors.map((color: any) => (
@@ -241,8 +290,8 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                       className="h-12 w-12 rounded-full border-4 transition"
                       style={{
                         backgroundColor: color.hex,
-                        borderColor: selectedColor.name === color.name ? "var(--gros-red)" : "#d0d0d0",
-                        transform: selectedColor.name === color.name ? "scale(1.1)" : "scale(1)",
+                        borderColor: selectedColor?.name === color.name ? "var(--gros-red)" : "#d0d0d0",
+                        transform: selectedColor?.name === color.name ? "scale(1.1)" : "scale(1)",
                       }}
                       title={color.name}
                     />

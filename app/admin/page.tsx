@@ -821,30 +821,44 @@ export default function AdminPage() {
                         Talles (separados por coma)
                       </label>
                       <Input
-                        value={newProduct.sizes.join(", ")}
-                        onChange={(e) =>
+                        value={Array.isArray(newProduct.sizes) ? newProduct.sizes.join(", ") : ""}
+                        onChange={(e) => {
+                          const value = e.target.value.trim()
+                          const sizes = value ? value.split(",").map((s) => s.trim()).filter((s) => s) : []
                           setNewProduct({
                             ...newProduct,
-                            sizes: e.target.value.split(",").map((s) => s.trim()).filter((s) => s),
+                            sizes,
                           })
-                        }
+                        }}
                         placeholder="S, M, L, XL"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {Array.isArray(newProduct.sizes) && newProduct.sizes.length > 0
+                          ? `${newProduct.sizes.length} talle(s): ${newProduct.sizes.join(", ")}`
+                          : "Sin talles configurados"}
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
                         Colores (separados por coma)
                       </label>
                       <Input
-                        value={newProduct.colors.join(", ")}
-                        onChange={(e) =>
+                        value={Array.isArray(newProduct.colors) ? newProduct.colors.join(", ") : ""}
+                        onChange={(e) => {
+                          const value = e.target.value.trim()
+                          const colors = value ? value.split(",").map((c) => c.trim()).filter((c) => c) : []
                           setNewProduct({
                             ...newProduct,
-                            colors: e.target.value.split(",").map((c) => c.trim()).filter((c) => c),
+                            colors,
                           })
-                        }
-                        placeholder="Negro, Blanco, Azul"
+                        }}
+                        placeholder="Rojo, Negro, Blanco, Azul"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {Array.isArray(newProduct.colors) && newProduct.colors.length > 0
+                          ? `${newProduct.colors.length} color(es): ${newProduct.colors.join(", ")}`
+                          : "Sin colores configurados"}
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
