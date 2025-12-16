@@ -90,6 +90,10 @@ export default function AdminPage() {
   })
   const [editingProduct, setEditingProduct] = useState<number | null>(null)
 
+  // Temporary input states for sizes and colors (raw text input)
+  const [sizesInput, setSizesInput] = useState("")
+  const [colorsInput, setColorsInput] = useState("")
+
   const [newCarouselImage, setNewCarouselImage] = useState({
     title: "",
     description: "",
@@ -225,6 +229,8 @@ export default function AdminPage() {
         lead_time: "7-10 días",
         active: true,
       })
+      setSizesInput("")
+      setColorsInput("")
       loadProducts()
     } catch (error) {
       setAlertModal({
@@ -265,6 +271,8 @@ export default function AdminPage() {
         lead_time: "7-10 días",
         active: true,
       })
+      setSizesInput("")
+      setColorsInput("")
       setEditingProduct(null)
       loadProducts()
     } catch (error) {
@@ -317,6 +325,9 @@ export default function AdminPage() {
       lead_time: product.lead_time || "7-10 días",
       active: product.active !== undefined ? product.active : true,
     })
+    // Populate input fields for editing
+    setSizesInput(Array.isArray(product.sizes) ? product.sizes.join(", ") : "")
+    setColorsInput(Array.isArray(product.colors) ? product.colors.join(", ") : "")
   }
 
   const cancelEditProduct = () => {
@@ -332,6 +343,8 @@ export default function AdminPage() {
       lead_time: "7-10 días",
       active: true,
     })
+    setSizesInput("")
+    setColorsInput("")
   }
 
   const toggleProductActive = async (id: number, currentActive: boolean) => {
@@ -821,8 +834,9 @@ export default function AdminPage() {
                         Talles (separados por coma)
                       </label>
                       <Input
-                        value={Array.isArray(newProduct.sizes) ? newProduct.sizes.join(", ") : ""}
-                        onChange={(e) => {
+                        value={sizesInput}
+                        onChange={(e) => setSizesInput(e.target.value)}
+                        onBlur={(e) => {
                           const value = e.target.value.trim()
                           const sizes = value ? value.split(",").map((s) => s.trim()).filter((s) => s) : []
                           setNewProduct({
@@ -835,7 +849,7 @@ export default function AdminPage() {
                       <p className="text-xs text-gray-500 mt-1">
                         {Array.isArray(newProduct.sizes) && newProduct.sizes.length > 0
                           ? `${newProduct.sizes.length} talle(s): ${newProduct.sizes.join(", ")}`
-                          : "Sin talles configurados"}
+                          : "Escribe los talles y presiona Tab o haz clic fuera"}
                       </p>
                     </div>
                     <div>
@@ -843,8 +857,9 @@ export default function AdminPage() {
                         Colores (separados por coma)
                       </label>
                       <Input
-                        value={Array.isArray(newProduct.colors) ? newProduct.colors.join(", ") : ""}
-                        onChange={(e) => {
+                        value={colorsInput}
+                        onChange={(e) => setColorsInput(e.target.value)}
+                        onBlur={(e) => {
                           const value = e.target.value.trim()
                           const colors = value ? value.split(",").map((c) => c.trim()).filter((c) => c) : []
                           setNewProduct({
@@ -857,7 +872,7 @@ export default function AdminPage() {
                       <p className="text-xs text-gray-500 mt-1">
                         {Array.isArray(newProduct.colors) && newProduct.colors.length > 0
                           ? `${newProduct.colors.length} color(es): ${newProduct.colors.join(", ")}`
-                          : "Sin colores configurados"}
+                          : "Escribe los colores y presiona Tab o haz clic fuera"}
                       </p>
                     </div>
                     <div>
