@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { ImageUpload } from "@/components/ui/image-upload"
 
 export default function AdminPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null)
 
@@ -130,6 +131,14 @@ export default function AdminPage() {
     setSupabase(createClient())
   }, [])
 
+  // Sincronizar tab con URL query parameter
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && ['orders', 'products', 'categories', 'clubs', 'carousel'].includes(tab)) {
+      setActiveTab(tab as "orders" | "products" | "categories" | "clubs" | "carousel")
+    }
+  }, [searchParams])
+
   useEffect(() => {
     if (!supabase) return
 
@@ -199,6 +208,11 @@ export default function AdminPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setIsLoggedIn(false)
+  }
+
+  const changeTab = (tab: "orders" | "products" | "categories" | "clubs" | "carousel") => {
+    setActiveTab(tab)
+    router.push(`/admin?tab=${tab}`)
   }
 
   const updateOrderStatus = (orderId: number, newStatus: string) => {
@@ -880,7 +894,7 @@ export default function AdminPage() {
       <div className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex gap-8">
           <button
-            onClick={() => setActiveTab("orders")}
+            onClick={() => changeTab("orders")}
             className={`py-4 px-2 font-bold border-b-2 transition ${
               activeTab === "orders"
                 ? "border-gros-red text-gros-red"
@@ -895,7 +909,7 @@ export default function AdminPage() {
             Pedidos
           </button>
           <button
-            onClick={() => setActiveTab("products")}
+            onClick={() => changeTab("products")}
             className={`py-4 px-2 font-bold border-b-2 transition`}
             style={{
               borderBottomColor: activeTab === "products" ? "var(--gros-red)" : "transparent",
@@ -906,7 +920,7 @@ export default function AdminPage() {
             Productos
           </button>
           <button
-            onClick={() => setActiveTab("categories")}
+            onClick={() => changeTab("categories")}
             className={`py-4 px-2 font-bold border-b-2 transition`}
             style={{
               borderBottomColor: activeTab === "categories" ? "var(--gros-red)" : "transparent",
@@ -917,7 +931,7 @@ export default function AdminPage() {
             Categorías
           </button>
           <button
-            onClick={() => setActiveTab("clubs")}
+            onClick={() => changeTab("clubs")}
             className={`py-4 px-2 font-bold border-b-2 transition`}
             style={{
               borderBottomColor: activeTab === "clubs" ? "var(--gros-red)" : "transparent",
@@ -928,7 +942,7 @@ export default function AdminPage() {
             Clubes
           </button>
           <button
-            onClick={() => setActiveTab("carousel")}
+            onClick={() => changeTab("carousel")}
             className={`py-4 px-2 font-bold border-b-2 transition`}
             style={{
               borderBottomColor: activeTab === "carousel" ? "var(--gros-red)" : "transparent",
