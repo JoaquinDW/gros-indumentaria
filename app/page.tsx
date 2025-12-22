@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
 import { Carousel } from "@/components/carousel"
+import { ClientsSection } from "@/components/clients-section"
 
 export default function Home() {
   const [products, setProducts] = useState<any[]>([])
@@ -164,6 +165,9 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {/* Clients Section */}
+      <ClientsSection />
 
       {/* Services Section */}
       <section

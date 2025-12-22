@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,10 +12,18 @@ import { useCart } from "@/hooks/use-cart"
 import { ArrowRight, Loader2 } from "lucide-react"
 import { AlertModal } from "@/components/ui/alert-modal"
 
+interface Club {
+  id: number
+  name: string
+  slug: string
+  active: boolean
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, total, clearCart } = useCart()
   const [loading, setLoading] = useState(false)
+  const [clubs, setClubs] = useState<Club[]>([])
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean
     message: string
@@ -33,7 +41,25 @@ export default function CheckoutPage() {
     address: "",
     province: "",
     notes: "",
+    deliveryMethod: "correo" as "correo" | "club",
+    clubId: "",
   })
+
+  useEffect(() => {
+    loadClubs()
+  }, [])
+
+  const loadClubs = async () => {
+    try {
+      const response = await fetch("/api/clubs")
+      const data = await response.json()
+      if (data.clubs) {
+        setClubs(data.clubs.filter((c: Club) => c.active))
+      }
+    } catch (error) {
+      console.error("Error loading clubs:", error)
+    }
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -47,6 +73,16 @@ export default function CheckoutPage() {
       setAlertModal({
         isOpen: true,
         message: "Por favor completa todos los campos requeridos",
+        type: "error",
+      })
+      return
+    }
+
+    // Validate club selection if delivery method is club pickup
+    if (formData.deliveryMethod === "club" && !formData.clubId) {
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor selecciona un club para el retiro",
         type: "error",
       })
       return
@@ -101,7 +137,16 @@ export default function CheckoutPage() {
         .map((item) => `${item.quantity}x ${item.name} (${item.size}, ${item.color}) - $${item.price * item.quantity}`)
         .join("\n")
 
-      const message = `Hola! Quiero hacer un pedido:\n\n${orderSummary}\n\nTotal: $${total}\n\nDatos de contacto:\nNombre: ${formData.name}\nEmail: ${formData.email}\nTeléfono: ${formData.phone}\nDirección: ${formData.address}\nProvincia: ${formData.province}`
+      // Build delivery info
+      let deliveryInfo = ""
+      if (formData.deliveryMethod === "club") {
+        const selectedClub = clubs.find((c) => c.id.toString() === formData.clubId)
+        deliveryInfo = `\n\nMétodo de entrega: Retiro en el club\nClub: ${selectedClub?.name || "No especificado"}`
+      } else {
+        deliveryInfo = `\n\nMétodo de entrega: Envío a domicilio (Correo Argentino)\nDirección: ${formData.address}\nProvincia: ${formData.province}`
+      }
+
+      const message = `Hola! Quiero hacer un pedido:\n\n${orderSummary}\n\nTotal: $${total}\n\nDatos de contacto:\nNombre: ${formData.name}\nEmail: ${formData.email}\nTeléfono: ${formData.phone}${deliveryInfo}${formData.notes ? `\n\nNotas: ${formData.notes}` : ""}`
 
       const whatsappUrl = `https://wa.me/5491234567890?text=${encodeURIComponent(message)}`
       window.open(whatsappUrl, "_blank")
@@ -195,6 +240,66 @@ export default function CheckoutPage() {
                     <option value="Otras">Otras</option>
                   </select>
                 </div>
+
+                {/* Delivery Method */}
+                <div>
+                  <label className="block text-sm font-bold text-gros-black mb-3">Método de Entrega *</label>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3 p-4 border rounded cursor-pointer hover:bg-gray-50 transition">
+                      <input
+                        type="radio"
+                        name="deliveryMethod"
+                        value="correo"
+                        checked={formData.deliveryMethod === "correo"}
+                        onChange={handleInputChange}
+                        className="mt-1"
+                      />
+                      <div>
+                        <div className="font-bold text-gros-black">Envío a Domicilio (Correo Argentino)</div>
+                        <p className="text-sm text-gray-600">
+                          Recibirás tu pedido en la dirección indicada. El costo de envío se calculará según la provincia.
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-3 p-4 border rounded cursor-pointer hover:bg-gray-50 transition">
+                      <input
+                        type="radio"
+                        name="deliveryMethod"
+                        value="club"
+                        checked={formData.deliveryMethod === "club"}
+                        onChange={handleInputChange}
+                        className="mt-1"
+                      />
+                      <div>
+                        <div className="font-bold text-gros-black">Retiro en el Club</div>
+                        <p className="text-sm text-gray-600">
+                          Retira tu pedido directamente en el club seleccionado. Sin costo adicional.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Club Selection - Only shown when club delivery is selected */}
+                {formData.deliveryMethod === "club" && (
+                  <div>
+                    <label className="block text-sm font-bold text-gros-black mb-2">Seleccionar Club *</label>
+                    <select
+                      name="clubId"
+                      value={formData.clubId}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                    >
+                      <option value="">Selecciona un club</option>
+                      {clubs.map((club) => (
+                        <option key={club.id} value={club.id}>
+                          {club.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-bold text-gros-black mb-2">Notas o comentarios</label>

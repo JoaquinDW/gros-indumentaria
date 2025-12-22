@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder } from "lucide-react"
+import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder, Users } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -16,7 +16,7 @@ export default function AdminPage() {
   const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null)
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "categories" | "carousel">("orders")
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "categories" | "clubs" | "carousel">("orders")
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -111,6 +111,18 @@ export default function AdminPage() {
   })
   const [editingCategory, setEditingCategory] = useState<number | null>(null)
 
+  const [clubs, setClubs] = useState<any[]>([])
+  const [newClub, setNewClub] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    logo_url: "",
+    order_index: 0,
+  })
+  const [editingClub, setEditingClub] = useState<number | null>(null)
+  const [selectedClubForProducts, setSelectedClubForProducts] = useState<number | null>(null)
+  const [clubProducts, setClubProducts] = useState<number[]>([])
+
   useEffect(() => {
     setMounted(true)
     setSupabase(createClient())
@@ -133,6 +145,7 @@ export default function AdminPage() {
     if (isLoggedIn) {
       loadCategories()
       loadProducts()
+      loadClubs()
     }
   }, [isLoggedIn])
 
@@ -563,6 +576,227 @@ export default function AdminPage() {
     }
   }
 
+  const loadClubs = async () => {
+    try {
+      const response = await fetch("/api/clubs")
+      const data = await response.json()
+      if (data.clubs) {
+        setClubs(data.clubs)
+      }
+    } catch (error) {
+      console.error("Error loading clubs:", error)
+    }
+  }
+
+  const loadClubProducts = async (clubId: number) => {
+    try {
+      const response = await fetch(`/api/clubs/${clubId}/products`)
+      const data = await response.json()
+      if (data.products) {
+        setClubProducts(data.products.map((p: any) => p.id))
+      }
+    } catch (error) {
+      console.error("Error loading club products:", error)
+    }
+  }
+
+  const addClub = async () => {
+    if (!newClub.name) {
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor completa el nombre del club",
+        type: "error",
+      })
+      return
+    }
+
+    try {
+      const response = await fetch("/api/clubs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newClub),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al crear club")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Club creado exitosamente",
+        type: "success",
+      })
+      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
+      loadClubs()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al crear club",
+        type: "error",
+      })
+    }
+  }
+
+  const updateClub = async (id: number) => {
+    try {
+      const response = await fetch(`/api/clubs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newClub),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al actualizar club")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Club actualizado exitosamente",
+        type: "success",
+      })
+      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
+      setEditingClub(null)
+      loadClubs()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al actualizar club",
+        type: "error",
+      })
+    }
+  }
+
+  const deleteClub = async (id: number) => {
+    if (!confirm("¿Estás seguro de eliminar este club?")) return
+
+    try {
+      const response = await fetch(`/api/clubs/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Error al eliminar club")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Club eliminado exitosamente",
+        type: "success",
+      })
+      loadClubs()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al eliminar club",
+        type: "error",
+      })
+    }
+  }
+
+  const startEditClub = (club: any) => {
+    setEditingClub(club.id)
+    setNewClub({
+      name: club.name,
+      slug: club.slug || "",
+      description: club.description || "",
+      logo_url: club.logo_url || "",
+      order_index: club.order_index || 0,
+    })
+  }
+
+  const cancelEditClub = () => {
+    setEditingClub(null)
+    setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
+  }
+
+  const updateClubOrder = async (clubId: number, direction: "up" | "down") => {
+    const index = clubs.findIndex((c) => c.id === clubId)
+    if (direction === "up" && index > 0) {
+      const newOrder = clubs[index - 1].order_index
+      await fetch(`/api/clubs/${clubId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: newOrder }),
+      })
+      await fetch(`/api/clubs/${clubs[index - 1].id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: clubs[index].order_index }),
+      })
+      loadClubs()
+    } else if (direction === "down" && index < clubs.length - 1) {
+      const newOrder = clubs[index + 1].order_index
+      await fetch(`/api/clubs/${clubId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: newOrder }),
+      })
+      await fetch(`/api/clubs/${clubs[index + 1].id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: clubs[index].order_index }),
+      })
+      loadClubs()
+    }
+  }
+
+  const toggleProductInClub = (productId: number) => {
+    setClubProducts((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+    )
+  }
+
+  const saveClubProducts = async () => {
+    if (!selectedClubForProducts) return
+
+    try {
+      // First, get current products for the club
+      const response = await fetch(`/api/clubs/${selectedClubForProducts}/products`)
+      const data = await response.json()
+      const currentProducts = data.products?.map((p: any) => p.id) || []
+
+      // Find products to remove
+      const toRemove = currentProducts.filter((id: number) => !clubProducts.includes(id))
+      // Find products to add
+      const toAdd = clubProducts.filter((id: number) => !currentProducts.includes(id))
+
+      // Remove products
+      for (const productId of toRemove) {
+        await fetch(`/api/clubs/${selectedClubForProducts}/products?product_id=${productId}`, {
+          method: "DELETE",
+        })
+      }
+
+      // Add products
+      if (toAdd.length > 0) {
+        await fetch(`/api/clubs/${selectedClubForProducts}/products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ product_ids: toAdd }),
+        })
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Productos del club actualizados exitosamente",
+        type: "success",
+      })
+      setSelectedClubForProducts(null)
+      setClubProducts([])
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al actualizar productos del club",
+        type: "error",
+      })
+    }
+  }
+
   if (!mounted || !supabase || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -671,6 +905,17 @@ export default function AdminPage() {
           >
             <Folder className="h-5 w-5 inline mr-2" />
             Categorías
+          </button>
+          <button
+            onClick={() => setActiveTab("clubs")}
+            className={`py-4 px-2 font-bold border-b-2 transition`}
+            style={{
+              borderBottomColor: activeTab === "clubs" ? "var(--gros-red)" : "transparent",
+              color: activeTab === "clubs" ? "var(--gros-red)" : "#666666",
+            }}
+          >
+            <Users className="h-5 w-5 inline mr-2" />
+            Clubes
           </button>
           <button
             onClick={() => setActiveTab("carousel")}
@@ -1159,6 +1404,254 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === "clubs" && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
+                  {editingClub ? "Editar Club" : "Agregar Nuevo Club"}
+                </h2>
+
+                <Card className="p-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Nombre *
+                      </label>
+                      <Input
+                        value={newClub.name}
+                        onChange={(e) => setNewClub({ ...newClub, name: e.target.value })}
+                        placeholder="Nombre del club"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Slug (Opcional - se genera automático)
+                      </label>
+                      <Input
+                        value={newClub.slug}
+                        onChange={(e) => setNewClub({ ...newClub, slug: e.target.value })}
+                        placeholder="depor-garcitas"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                      Descripción (Opcional)
+                    </label>
+                    <Input
+                      value={newClub.description}
+                      onChange={(e) => setNewClub({ ...newClub, description: e.target.value })}
+                      placeholder="Descripción del club"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <ImageUpload
+                        label="Logo del Club (Opcional)"
+                        value={newClub.logo_url}
+                        onChange={(url) => setNewClub({ ...newClub, logo_url: url })}
+                        onRemove={() => setNewClub({ ...newClub, logo_url: "" })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Orden
+                      </label>
+                      <Input
+                        type="number"
+                        value={newClub.order_index}
+                        onChange={(e) =>
+                          setNewClub({
+                            ...newClub,
+                            order_index: Number.parseInt(e.target.value),
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {editingClub ? (
+                      <>
+                        <Button
+                          onClick={() => updateClub(editingClub)}
+                          className="hover:opacity-90 font-bold"
+                          style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                        >
+                          Actualizar Club
+                        </Button>
+                        <Button
+                          onClick={cancelEditClub}
+                          variant="outline"
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        onClick={addClub}
+                        className="hover:opacity-90 font-bold"
+                        style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                      >
+                        <Plus className="mr-2 h-5 w-5" />
+                        Agregar Club
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
+                  Clubes Actuales
+                </h2>
+
+                <div className="space-y-4">
+                  {clubs.map((club, idx) => (
+                    <Card key={club.id} className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">NOMBRE</p>
+                          <p className="font-bold" style={{ color: "var(--gros-black)" }}>
+                            {club.name}
+                          </p>
+                          <p className="text-xs text-gray-500">/{club.slug}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">DESCRIPCIÓN</p>
+                          <p className="text-sm" style={{ color: "var(--gros-black)" }}>
+                            {club.description || "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">ORDEN</p>
+                          <p className="font-bold" style={{ color: "var(--gros-red)" }}>
+                            {club.order_index}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">ESTADO</p>
+                          <p className="font-bold text-green-600">{club.active ? "Activo" : "Inactivo"}</p>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              onClick={() => updateClubOrder(club.id, "up")}
+                              disabled={idx === 0}
+                              className="hover:opacity-90"
+                              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                            >
+                              ↑
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => updateClubOrder(club.id, "down")}
+                              disabled={idx === clubs.length - 1}
+                              className="hover:opacity-90"
+                              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                            >
+                              ↓
+                            </Button>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedClubForProducts(club.id)
+                              loadClubProducts(club.id)
+                            }}
+                            variant="outline"
+                            className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                          >
+                            Productos
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => startEditClub(club)}
+                            variant="outline"
+                            className="border-gros-red text-gros-red hover:bg-gros-red/10 bg-transparent"
+                            style={{ borderColor: "var(--gros-red)", color: "var(--gros-red)" }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => deleteClub(club.id)}
+                            variant="outline"
+                            className="border-red-500 text-red-500 hover:bg-red-50"
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {selectedClubForProducts && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
+                    Asignar Productos a {clubs.find((c) => c.id === selectedClubForProducts)?.name}
+                  </h2>
+
+                  <Card className="p-6 space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Selecciona los productos que pertenecen a este club. Los productos seleccionados aparecerán en la
+                      página del club.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto border rounded p-4">
+                      {products.map((product) => (
+                        <label
+                          key={product.id}
+                          className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={clubProducts.includes(product.id)}
+                            onChange={() => toggleProductInClub(product.id)}
+                            className="mt-1 w-4 h-4"
+                          />
+                          <div className="flex-1">
+                            <p className="font-bold text-sm" style={{ color: "var(--gros-black)" }}>
+                              {product.name}
+                            </p>
+                            <p className="text-xs text-gray-500">{product.category}</p>
+                            <p className="text-xs font-bold" style={{ color: "var(--gros-red)" }}>
+                              ${product.price}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={saveClubProducts}
+                        className="hover:opacity-90 font-bold"
+                        style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                      >
+                        Guardar Productos
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setSelectedClubForProducts(null)
+                          setClubProducts([])
+                        }}
+                        variant="outline"
+                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              )}
             </div>
           )}
 

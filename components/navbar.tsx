@@ -1,22 +1,60 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { Menu, X, ShoppingCart } from "lucide-react"
+import { Menu, X, ShoppingCart, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/hooks/use-cart"
 
+interface Club {
+  id: number
+  name: string
+  slug: string
+  active: boolean
+}
+
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isClubsDropdownOpen, setIsClubsDropdownOpen] = useState(false)
+  const [clubs, setClubs] = useState<Club[]>([])
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const { items } = useCart()
   const cartCount = items.length
 
   const navLinks = [
     { id: "inicio", label: "Inicio", href: "/" },
-    { id: "clubes", label: "Clubes", href: "/clubes" },
     { id: "productos", label: "Productos", href: "/clubes" },
     { id: "contacto", label: "Contacto", href: "/contacto" },
   ]
+
+  useEffect(() => {
+    loadClubs()
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsClubsDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
+  const loadClubs = async () => {
+    try {
+      const response = await fetch("/api/clubs")
+      const data = await response.json()
+      if (data.clubs) {
+        setClubs(data.clubs.filter((c: Club) => c.active))
+      }
+    } catch (error) {
+      console.error("Error loading clubs:", error)
+    }
+  }
 
   return (
     <nav
@@ -44,6 +82,46 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Clubs Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsClubsDropdownOpen(!isClubsDropdownOpen)}
+                className="flex items-center gap-1 font-bold transition hover:opacity-70"
+                style={{ color: "var(--gros-black)" }}
+              >
+                Clubes
+                <ChevronDown className={`h-4 w-4 transition-transform ${isClubsDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {isClubsDropdownOpen && clubs.length > 0 && (
+                <div
+                  className="absolute top-full mt-2 w-56 bg-white rounded-md shadow-lg border py-2"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <Link
+                    href="/clubes"
+                    onClick={() => setIsClubsDropdownOpen(false)}
+                    className="block px-4 py-2 font-bold hover:bg-gray-50 transition"
+                    style={{ color: "var(--gros-black)" }}
+                  >
+                    Ver todos los clubes
+                  </Link>
+                  <div className="border-t my-2" style={{ borderColor: "var(--border)" }}></div>
+                  {clubs.map((club) => (
+                    <Link
+                      key={club.id}
+                      href={`/clubes/${club.slug}`}
+                      onClick={() => setIsClubsDropdownOpen(false)}
+                      className="block px-4 py-2 hover:bg-gray-50 transition"
+                      style={{ color: "var(--gros-black)" }}
+                    >
+                      {club.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Cart and Mobile Menu */}
@@ -81,7 +159,7 @@ export function Navbar() {
           }`}
           style={{ top: "65px" }}
         >
-          <div className="flex flex-col h-full px-8 py-12 space-y-6">
+          <div className="flex flex-col h-full px-8 py-12 space-y-6 overflow-y-auto">
             {navLinks.map((link) => (
               <Link
                 key={link.id}
@@ -93,6 +171,34 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Mobile Clubs Section */}
+            <div className="border-b pb-4" style={{ borderColor: "var(--border)" }}>
+              <div className="text-2xl font-bold mb-4" style={{ color: "var(--gros-black)" }}>
+                Clubes
+              </div>
+              <div className="pl-4 space-y-3">
+                <Link
+                  href="/clubes"
+                  onClick={() => setIsOpen(false)}
+                  className="block text-lg font-bold hover:opacity-70 transition"
+                  style={{ color: "var(--gros-red)" }}
+                >
+                  Ver todos los clubes
+                </Link>
+                {clubs.map((club) => (
+                  <Link
+                    key={club.id}
+                    href={`/clubes/${club.slug}`}
+                    onClick={() => setIsOpen(false)}
+                    className="block text-lg hover:opacity-70 transition"
+                    style={{ color: "var(--gros-black)" }}
+                  >
+                    {club.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
