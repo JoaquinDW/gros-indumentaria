@@ -134,7 +134,10 @@ export default function CheckoutPage() {
       }
     } else if (method === "whatsapp") {
       const orderSummary = items
-        .map((item) => `${item.quantity}x ${item.name} (${item.size}, ${item.color}) - $${item.price * item.quantity}`)
+        .map((item) => {
+          const fabricText = item.fabric && item.fabric !== "Sin especificar" ? `, ${item.fabric}` : ""
+          return `${item.quantity}x ${item.name} (${item.size}, ${item.color}${fabricText}) - $${item.price * item.quantity}`
+        })
         .join("\n")
 
       // Build delivery info
@@ -330,6 +333,7 @@ export default function CheckoutPage() {
                     </div>
                     <div className="text-xs text-gray-500">
                       {item.quantity}x - {item.size} - {item.color}
+                      {item.fabric && item.fabric !== "Sin especificar" && ` - ${item.fabric}`}
                     </div>
                   </div>
                 ))}

@@ -84,6 +84,7 @@ export default function CartPage() {
                     <h3 className="font-bold text-gros-black mb-1">{item.name}</h3>
                     <p className="text-sm text-gray-600 mb-2">
                       Talle: {item.size} • Color: {item.color}
+                      {item.fabric && item.fabric !== "Sin especificar" && ` • Tela: ${item.fabric}`}
                     </p>
                     {item.customText && (
                       <p className="text-sm text-gros-red mb-2">Personalización: {item.customText}</p>

@@ -22,6 +22,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedSize, setSelectedSize] = useState("")
   const [selectedColor, setSelectedColor] = useState<any>(null)
+  const [selectedFabric, setSelectedFabric] = useState("")
   const [quantity, setQuantity] = useState(1)
   const [customText, setCustomText] = useState("")
   const { addItem } = useCart()
@@ -61,6 +62,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               name: colorName,
               hex: getColorHex(colorName)
             })),
+            fabrics: foundProduct.fabrics || [],
             leadTime: foundProduct.lead_time || "7-10 días",
             description_long: foundProduct.description || "Producto de alta calidad personalizable."
           }
@@ -69,6 +71,10 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
           // Set initial color after product is loaded
           if (transformedProduct.colors.length > 0) {
             setSelectedColor(transformedProduct.colors[0])
+          }
+          // Set initial fabric if available
+          if (transformedProduct.fabrics.length > 0) {
+            setSelectedFabric(transformedProduct.fabrics[0])
           }
         } else {
           setNotFound(true)
@@ -108,6 +114,14 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       })
       return
     }
+    if (product.fabrics && product.fabrics.length > 0 && !selectedFabric) {
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor selecciona un tipo de tela",
+        type: "error",
+      })
+      return
+    }
     addItem({
       productId: product.id,
       name: product.name,
@@ -115,6 +129,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       quantity,
       size: selectedSize,
       color: selectedColor?.name || "Sin color",
+      fabric: selectedFabric || "Sin especificar",
       customText,
       image: product.images[0],
     })
@@ -298,6 +313,31 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                   ))}
                 </div>
               </div>
+
+              {/* Fabrics */}
+              {product.fabrics && product.fabrics.length > 0 && (
+                <div>
+                  <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
+                    Tipo de Tela
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {product.fabrics.map((fabric: string) => (
+                      <button
+                        key={fabric}
+                        onClick={() => setSelectedFabric(fabric)}
+                        className="py-2 px-3 text-center border-2 rounded font-semibold transition"
+                        style={{
+                          borderColor: selectedFabric === fabric ? "var(--gros-red)" : "#d0d0d0",
+                          backgroundColor: selectedFabric === fabric ? "var(--gros-red)" : "var(--gros-white)",
+                          color: selectedFabric === fabric ? "var(--gros-white)" : "var(--gros-black)",
+                        }}
+                      >
+                        {fabric}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Quantity */}
               <div>

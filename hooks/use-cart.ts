@@ -9,6 +9,7 @@ export interface CartItem {
   quantity: number
   size: string
   color: string
+  fabric: string
   customText?: string
   image: string
 }
@@ -40,7 +41,7 @@ export function useCart() {
   const addItem = useCallback((item: CartItem) => {
     setItems((prev) => {
       const existingItem = prev.find(
-        (i) => i.productId === item.productId && i.size === item.size && i.color === item.color,
+        (i) => i.productId === item.productId && i.size === item.size && i.color === item.color && i.fabric === item.fabric,
       )
 
       if (existingItem) {

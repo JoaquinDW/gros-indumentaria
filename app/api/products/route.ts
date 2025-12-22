@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       image_url,
       sizes,
       colors,
+      fabrics,
       lead_time,
       active,
     } = body
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
         image_url: image_url || null,
         sizes: sizes || [],
         colors: colors || [],
+        fabrics: fabrics || [],
         lead_time: lead_time || "7-10 días",
         active: active !== undefined ? active : true,
       })

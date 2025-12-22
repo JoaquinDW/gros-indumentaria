@@ -27,6 +27,7 @@ export async function PATCH(
       image_url,
       sizes,
       colors,
+      fabrics,
       lead_time,
       active,
     } = body
@@ -40,6 +41,7 @@ export async function PATCH(
     if (image_url !== undefined) updateData.image_url = image_url
     if (sizes !== undefined) updateData.sizes = sizes
     if (colors !== undefined) updateData.colors = colors
+    if (fabrics !== undefined) updateData.fabrics = fabrics
     if (lead_time !== undefined) updateData.lead_time = lead_time
     if (active !== undefined) updateData.active = active
     updateData.updated_at = new Date().toISOString()

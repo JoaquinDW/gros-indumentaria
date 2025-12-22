@@ -85,14 +85,16 @@ export default function AdminPage() {
     image_url: "",
     sizes: [] as string[],
     colors: [] as string[],
+    fabrics: [] as string[],
     lead_time: "7-10 días",
     active: true,
   })
   const [editingProduct, setEditingProduct] = useState<number | null>(null)
 
-  // Temporary input states for sizes and colors (raw text input)
+  // Temporary input states for sizes, colors, and fabrics (raw text input)
   const [sizesInput, setSizesInput] = useState("")
   const [colorsInput, setColorsInput] = useState("")
+  const [fabricsInput, setFabricsInput] = useState("")
 
   const [newCarouselImage, setNewCarouselImage] = useState({
     title: "",
@@ -239,11 +241,13 @@ export default function AdminPage() {
         image_url: "",
         sizes: [],
         colors: [],
+        fabrics: [],
         lead_time: "7-10 días",
         active: true,
       })
       setSizesInput("")
       setColorsInput("")
+      setFabricsInput("")
       loadProducts()
     } catch (error) {
       setAlertModal({
@@ -281,11 +285,13 @@ export default function AdminPage() {
         image_url: "",
         sizes: [],
         colors: [],
+        fabrics: [],
         lead_time: "7-10 días",
         active: true,
       })
       setSizesInput("")
       setColorsInput("")
+      setFabricsInput("")
       setEditingProduct(null)
       loadProducts()
     } catch (error) {
@@ -335,12 +341,14 @@ export default function AdminPage() {
       image_url: product.image_url || "",
       sizes: product.sizes || [],
       colors: product.colors || [],
+      fabrics: product.fabrics || [],
       lead_time: product.lead_time || "7-10 días",
       active: product.active !== undefined ? product.active : true,
     })
     // Populate input fields for editing
     setSizesInput(Array.isArray(product.sizes) ? product.sizes.join(", ") : "")
     setColorsInput(Array.isArray(product.colors) ? product.colors.join(", ") : "")
+    setFabricsInput(Array.isArray(product.fabrics) ? product.fabrics.join(", ") : "")
   }
 
   const cancelEditProduct = () => {
@@ -353,11 +361,13 @@ export default function AdminPage() {
       image_url: "",
       sizes: [],
       colors: [],
+      fabrics: [],
       lead_time: "7-10 días",
       active: true,
     })
     setSizesInput("")
     setColorsInput("")
+    setFabricsInput("")
   }
 
   const toggleProductActive = async (id: number, currentActive: boolean) => {
@@ -1120,6 +1130,31 @@ export default function AdminPage() {
                           : "Escribe los colores y presiona Tab o haz clic fuera"}
                       </p>
                     </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                        Tipos de Tela (separados por coma)
+                      </label>
+                      <Input
+                        value={fabricsInput}
+                        onChange={(e) => setFabricsInput(e.target.value)}
+                        onBlur={(e) => {
+                          const value = e.target.value.trim()
+                          const fabrics = value ? value.split(",").map((f) => f.trim()).filter((f) => f) : []
+                          setNewProduct({
+                            ...newProduct,
+                            fabrics,
+                          })
+                        }}
+                        placeholder="Algodón, Poliéster, Lycra"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {Array.isArray(newProduct.fabrics) && newProduct.fabrics.length > 0
+                          ? `${newProduct.fabrics.length} tela(s): ${newProduct.fabrics.join(", ")}`
+                          : "Escribe los tipos de tela y presiona Tab o haz clic fuera"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
                         Tiempo de Entrega
