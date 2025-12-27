@@ -25,13 +25,16 @@ export async function PATCH(
 
     if (name !== undefined) updateData.name = name
     if (slug !== undefined) {
-      // Normalize slug
-      updateData.slug = slug
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
+      // Generate slug from name if slug is empty, otherwise normalize provided slug
+      const slugToUse = slug || (name !== undefined ? name : '')
+      if (slugToUse) {
+        updateData.slug = slugToUse
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+      }
     }
     if (description !== undefined) updateData.description = description
     if (logo_url !== undefined) updateData.logo_url = logo_url

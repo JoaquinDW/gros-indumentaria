@@ -21,10 +21,10 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
 
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedSize, setSelectedSize] = useState("")
-  const [selectedColor, setSelectedColor] = useState<any>(null)
   const [selectedFabric, setSelectedFabric] = useState("")
   const [quantity, setQuantity] = useState(1)
   const [customText, setCustomText] = useState("")
+  const [currentPrice, setCurrentPrice] = useState(0)
   const { addItem } = useCart()
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean
@@ -53,28 +53,27 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
         const foundProduct = data.products.find((p: any) => p.id === productId)
 
         if (foundProduct) {
-          // Transform colors from array of strings to array of objects with name and hex
+          // Transform product data - fabrics is now an object with prices
           const transformedProduct = {
             ...foundProduct,
             images: foundProduct.image_url ? [foundProduct.image_url] : ["/placeholder.svg"],
             sizes: foundProduct.sizes || ["S", "M", "L", "XL"],
-            colors: (foundProduct.colors || ["Rojo", "Blanco", "Negro"]).map((colorName: string) => ({
-              name: colorName,
-              hex: getColorHex(colorName)
-            })),
-            fabrics: foundProduct.fabrics || [],
+            fabrics: foundProduct.fabrics || {},
             leadTime: foundProduct.lead_time || "7-10 días",
             description_long: foundProduct.description || "Producto de alta calidad personalizable."
           }
 
           setProduct(transformedProduct)
-          // Set initial color after product is loaded
-          if (transformedProduct.colors.length > 0) {
-            setSelectedColor(transformedProduct.colors[0])
-          }
-          // Set initial fabric if available
-          if (transformedProduct.fabrics.length > 0) {
-            setSelectedFabric(transformedProduct.fabrics[0])
+
+          // Set initial fabric and price if available
+          const fabricNames = Object.keys(transformedProduct.fabrics)
+          if (fabricNames.length > 0) {
+            const firstFabric = fabricNames[0]
+            setSelectedFabric(firstFabric)
+            setCurrentPrice(transformedProduct.fabrics[firstFabric])
+          } else {
+            // If no fabrics, use base price
+            setCurrentPrice(foundProduct.price)
           }
         } else {
           setNotFound(true)
@@ -88,21 +87,12 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
     }
   }
 
-  // Helper function to map color names to hex values
-  const getColorHex = (colorName: string): string => {
-    const colorMap: Record<string, string> = {
-      "Rojo": "#C43A2F",
-      "Blanco": "#FFFFFF",
-      "Negro": "#1A1A1A",
-      "Azul": "#1E5BAA",
-      "Verde": "#2D8A3E",
-      "Amarillo": "#F5C542",
-      "Gris": "#808080",
-      "Rosa": "#E91E63",
-      "Naranja": "#FF6B35",
-      "Violeta": "#9C27B0",
+  // Update price when fabric selection changes
+  const handleFabricChange = (fabricName: string) => {
+    setSelectedFabric(fabricName)
+    if (product.fabrics[fabricName]) {
+      setCurrentPrice(product.fabrics[fabricName])
     }
-    return colorMap[colorName] || "#000000"
   }
 
   const handleAddToCart = () => {
@@ -114,7 +104,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       })
       return
     }
-    if (product.fabrics && product.fabrics.length > 0 && !selectedFabric) {
+    if (Object.keys(product.fabrics).length > 0 && !selectedFabric) {
       setAlertModal({
         isOpen: true,
         message: "Por favor selecciona un tipo de tela",
@@ -125,10 +115,10 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
     addItem({
       productId: product.id,
       name: product.name,
-      price: product.price,
+      price: currentPrice, // Use current price based on selected fabric
       quantity,
       size: selectedSize,
-      color: selectedColor?.name || "Sin color",
+      color: "Sin color",
       fabric: selectedFabric || "Sin especificar",
       customText,
       image: product.images[0],
@@ -257,7 +247,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               </p>
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-bold" style={{ color: "var(--gros-red)" }}>
-                  ${product.price}
+                  ${currentPrice}
                 </span>
                 <span className="text-sm" style={{ color: "#999999" }}>
                   por unidad
@@ -292,47 +282,28 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                 </div>
               </div>
 
-              {/* Colors */}
-              <div>
-                <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
-                  Color: <span style={{ color: "var(--gros-red)" }}>{selectedColor?.name || "Selecciona un color"}</span>
-                </label>
-                <div className="flex gap-3">
-                  {product.colors.map((color: any) => (
-                    <button
-                      key={color.name}
-                      onClick={() => setSelectedColor(color)}
-                      className="h-12 w-12 rounded-full border-4 transition"
-                      style={{
-                        backgroundColor: color.hex,
-                        borderColor: selectedColor?.name === color.name ? "var(--gros-red)" : "#d0d0d0",
-                        transform: selectedColor?.name === color.name ? "scale(1.1)" : "scale(1)",
-                      }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
-
               {/* Fabrics */}
-              {product.fabrics && product.fabrics.length > 0 && (
+              {Object.keys(product.fabrics).length > 0 && (
                 <div>
                   <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
                     Tipo de Tela
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {product.fabrics.map((fabric: string) => (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {Object.entries(product.fabrics).map(([fabricName, price]: [string, any]) => (
                       <button
-                        key={fabric}
-                        onClick={() => setSelectedFabric(fabric)}
-                        className="py-2 px-3 text-center border-2 rounded font-semibold transition"
+                        key={fabricName}
+                        onClick={() => handleFabricChange(fabricName)}
+                        className="py-3 px-4 text-left border-2 rounded font-semibold transition"
                         style={{
-                          borderColor: selectedFabric === fabric ? "var(--gros-red)" : "#d0d0d0",
-                          backgroundColor: selectedFabric === fabric ? "var(--gros-red)" : "var(--gros-white)",
-                          color: selectedFabric === fabric ? "var(--gros-white)" : "var(--gros-black)",
+                          borderColor: selectedFabric === fabricName ? "var(--gros-red)" : "#d0d0d0",
+                          backgroundColor: selectedFabric === fabricName ? "var(--gros-red)" : "var(--gros-white)",
+                          color: selectedFabric === fabricName ? "var(--gros-white)" : "var(--gros-black)",
                         }}
                       >
-                        {fabric}
+                        <div className="flex justify-between items-center">
+                          <span>{fabricName}</span>
+                          <span className="text-sm font-bold">${price}</span>
+                        </div>
                       </button>
                     ))}
                   </div>

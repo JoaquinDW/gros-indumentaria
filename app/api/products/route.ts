@@ -11,7 +11,7 @@ export async function GET() {
       data: { session },
     } = await supabase.auth.getSession()
 
-    let query = supabase.from("products").select("*").order("created_at", { ascending: false })
+    let query = supabase.from("products").select("*").order("order_index", { ascending: true })
 
     // If not authenticated, only show active products
     if (!session) {
@@ -62,7 +62,6 @@ export async function POST(request: NextRequest) {
       price,
       image_url,
       sizes,
-      colors,
       fabrics,
       lead_time,
       active,
@@ -97,8 +96,7 @@ export async function POST(request: NextRequest) {
         price,
         image_url: image_url || null,
         sizes: sizes || [],
-        colors: colors || [],
-        fabrics: fabrics || [],
+        fabrics: fabrics || {},
         lead_time: lead_time || "7-10 días",
         active: active !== undefined ? active : true,
       })

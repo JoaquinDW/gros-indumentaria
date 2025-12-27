@@ -5,16 +5,136 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder, Users } from "lucide-react"
+import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder, Users, GripVertical } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { Modal } from "@/components/ui/modal"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+
+// Sortable Product Card Component
+function SortableProductCard({
+  product,
+  onEdit,
+  onDelete,
+  onToggleActive,
+}: {
+  product: any
+  onEdit: (product: any) => void
+  onDelete: (id: number) => void
+  onToggleActive: (id: number, active: boolean) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: product.id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <Card ref={setNodeRef} style={style} className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+        <div className="flex items-center gap-3">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing touch-none"
+            style={{ touchAction: "none" }}
+          >
+            <GripVertical className="h-5 w-5 text-gray-400" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-bold">NOMBRE</p>
+            <p className="font-bold" style={{ color: "var(--gros-black)" }}>
+              {product.name}
+            </p>
+          </div>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 font-bold">CATEGORÍA</p>
+          <p className="font-bold" style={{ color: "var(--gros-black)" }}>
+            {product.category}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 font-bold">PRECIO</p>
+          <p className="font-bold text-lg" style={{ color: "var(--gros-red)" }}>
+            ${product.price}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 font-bold">ESTADO</p>
+          <p className={`font-bold ${product.active ? "text-green-600" : "text-gray-400"}`}>
+            {product.active ? "Activo" : "Inactivo"}
+          </p>
+        </div>
+        <div>
+          <Button
+            onClick={() => onToggleActive(product.id, product.active)}
+            variant="outline"
+            className={`w-full ${
+              product.active
+                ? "border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                : "border-green-500 text-green-600 hover:bg-green-50"
+            }`}
+          >
+            {product.active ? "Desactivar" : "Activar"}
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => onEdit(product)}
+            variant="outline"
+            className="border-gros-red text-gros-red hover:bg-gros-red/10 bg-transparent"
+            style={{ borderColor: "var(--gros-red)", color: "var(--gros-red)" }}
+          >
+            Editar
+          </Button>
+          <Button
+            onClick={() => onDelete(product.id)}
+            variant="outline"
+            className="border-red-500 text-red-500 hover:bg-red-50"
+          >
+            Eliminar
+          </Button>
+        </div>
+      </div>
+    </Card>
+  )
+}
 
 export default function AdminPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null)
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeTab, setActiveTab] = useState<"orders" | "products" | "categories" | "clubs" | "carousel">("orders")
@@ -85,17 +205,19 @@ export default function AdminPage() {
     price: 0,
     image_url: "",
     sizes: [] as string[],
-    colors: [] as string[],
-    fabrics: [] as string[],
+    fabrics: {} as Record<string, number>,
     lead_time: "7-10 días",
     active: true,
+    club_ids: [] as number[],
   })
   const [editingProduct, setEditingProduct] = useState<number | null>(null)
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
 
-  // Temporary input states for sizes, colors, and fabrics (raw text input)
+  // Temporary input states for sizes and fabrics
   const [sizesInput, setSizesInput] = useState("")
-  const [colorsInput, setColorsInput] = useState("")
-  const [fabricsInput, setFabricsInput] = useState("")
+  const [fabricEntries, setFabricEntries] = useState<Array<{ name: string; price: string }>>([
+    { name: "", price: "" },
+  ])
 
   const [newCarouselImage, setNewCarouselImage] = useState({
     title: "",
@@ -113,6 +235,7 @@ export default function AdminPage() {
     order_index: 0,
   })
   const [editingCategory, setEditingCategory] = useState<number | null>(null)
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
 
   const [clubs, setClubs] = useState<any[]>([])
   const [newClub, setNewClub] = useState({
@@ -123,6 +246,7 @@ export default function AdminPage() {
     order_index: 0,
   })
   const [editingClub, setEditingClub] = useState<number | null>(null)
+  const [isClubModalOpen, setIsClubModalOpen] = useState(false)
   const [selectedClubForProducts, setSelectedClubForProducts] = useState<number | null>(null)
   const [clubProducts, setClubProducts] = useState<number[]>([])
 
@@ -230,16 +354,34 @@ export default function AdminPage() {
     }
 
     try {
+      // Separate club_ids from product data
+      const { club_ids, ...productData } = newProduct
+
       const response = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newProduct),
+        body: JSON.stringify(productData),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
         throw new Error(data.error || "Error al crear producto")
+      }
+
+      // Now associate the product with the selected clubs
+      if (club_ids.length > 0 && data.product?.id) {
+        for (const clubId of club_ids) {
+          try {
+            await fetch(`/api/clubs/${clubId}/products`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ product_ids: [data.product.id] }),
+            })
+          } catch (clubError) {
+            console.error(`Error associating product with club ${clubId}:`, clubError)
+          }
+        }
       }
 
       setAlertModal({
@@ -254,14 +396,14 @@ export default function AdminPage() {
         price: 0,
         image_url: "",
         sizes: [],
-        colors: [],
-        fabrics: [],
+        fabrics: {},
         lead_time: "7-10 días",
         active: true,
+        club_ids: [],
       })
       setSizesInput("")
-      setColorsInput("")
-      setFabricsInput("")
+      setFabricEntries([{ name: "", price: "" }])
+      setIsProductModalOpen(false)
       loadProducts()
     } catch (error) {
       setAlertModal({
@@ -274,16 +416,54 @@ export default function AdminPage() {
 
   const updateProduct = async (id: number) => {
     try {
+      // Separate club_ids from product data
+      const { club_ids, ...productData } = newProduct
+
       const response = await fetch(`/api/products/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newProduct),
+        body: JSON.stringify(productData),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
         throw new Error(data.error || "Error al actualizar producto")
+      }
+
+      // Update club associations
+      // First, get current clubs for this product
+      const currentClubsResponse = await fetch(`/api/products/${id}/clubs`)
+      const currentClubsData = await currentClubsResponse.json()
+      const currentClubIds = currentClubsData.clubs?.map((c: any) => c.id) || []
+
+      // Find clubs to remove
+      const toRemove = currentClubIds.filter((clubId: number) => !club_ids.includes(clubId))
+      // Find clubs to add
+      const toAdd = club_ids.filter((clubId: number) => !currentClubIds.includes(clubId))
+
+      // Remove from clubs
+      for (const clubId of toRemove) {
+        try {
+          await fetch(`/api/clubs/${clubId}/products?product_id=${id}`, {
+            method: "DELETE",
+          })
+        } catch (clubError) {
+          console.error(`Error removing product from club ${clubId}:`, clubError)
+        }
+      }
+
+      // Add to clubs
+      for (const clubId of toAdd) {
+        try {
+          await fetch(`/api/clubs/${clubId}/products`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ product_ids: [id] }),
+          })
+        } catch (clubError) {
+          console.error(`Error adding product to club ${clubId}:`, clubError)
+        }
       }
 
       setAlertModal({
@@ -298,15 +478,15 @@ export default function AdminPage() {
         price: 0,
         image_url: "",
         sizes: [],
-        colors: [],
-        fabrics: [],
+        fabrics: {},
         lead_time: "7-10 días",
         active: true,
+        club_ids: [],
       })
       setSizesInput("")
-      setColorsInput("")
-      setFabricsInput("")
+      setFabricEntries([{ name: "", price: "" }])
       setEditingProduct(null)
+      setIsProductModalOpen(false)
       loadProducts()
     } catch (error) {
       setAlertModal({
@@ -345,8 +525,21 @@ export default function AdminPage() {
     }
   }
 
-  const startEditProduct = (product: any) => {
+  const startEditProduct = async (product: any) => {
     setEditingProduct(product.id)
+
+    // Load clubs associated with this product
+    let productClubIds: number[] = []
+    try {
+      const clubsResponse = await fetch(`/api/products/${product.id}/clubs`)
+      const clubsData = await clubsResponse.json()
+      if (clubsData.clubs) {
+        productClubIds = clubsData.clubs.map((c: any) => c.id)
+      }
+    } catch (error) {
+      console.error("Error loading product clubs:", error)
+    }
+
     setNewProduct({
       name: product.name,
       category: product.category,
@@ -354,15 +547,27 @@ export default function AdminPage() {
       price: product.price,
       image_url: product.image_url || "",
       sizes: product.sizes || [],
-      colors: product.colors || [],
-      fabrics: product.fabrics || [],
+      fabrics: product.fabrics || {},
       lead_time: product.lead_time || "7-10 días",
       active: product.active !== undefined ? product.active : true,
+      club_ids: productClubIds,
     })
     // Populate input fields for editing
     setSizesInput(Array.isArray(product.sizes) ? product.sizes.join(", ") : "")
-    setColorsInput(Array.isArray(product.colors) ? product.colors.join(", ") : "")
-    setFabricsInput(Array.isArray(product.fabrics) ? product.fabrics.join(", ") : "")
+
+    // Convert fabrics object to array of entries for editing
+    const fabricsObj = product.fabrics || {}
+    if (Object.keys(fabricsObj).length > 0) {
+      setFabricEntries(
+        Object.entries(fabricsObj).map(([name, price]) => ({
+          name,
+          price: String(price),
+        }))
+      )
+    } else {
+      setFabricEntries([{ name: "", price: "" }])
+    }
+    setIsProductModalOpen(true)
   }
 
   const cancelEditProduct = () => {
@@ -374,14 +579,14 @@ export default function AdminPage() {
       price: 0,
       image_url: "",
       sizes: [],
-      colors: [],
-      fabrics: [],
+      fabrics: {},
       lead_time: "7-10 días",
       active: true,
+      club_ids: [],
     })
     setSizesInput("")
-    setColorsInput("")
-    setFabricsInput("")
+    setFabricEntries([{ name: "", price: "" }])
+    setIsProductModalOpen(false)
   }
 
   const toggleProductActive = async (id: number, currentActive: boolean) => {
@@ -485,6 +690,7 @@ export default function AdminPage() {
         type: "success",
       })
       setNewCategory({ name: "", description: "", image_url: "", order_index: 0 })
+      setIsCategoryModalOpen(false)
       loadCategories()
     } catch (error) {
       setAlertModal({
@@ -516,6 +722,7 @@ export default function AdminPage() {
       })
       setNewCategory({ name: "", description: "", image_url: "", order_index: 0 })
       setEditingCategory(null)
+      setIsCategoryModalOpen(false)
       loadCategories()
     } catch (error) {
       setAlertModal({
@@ -562,11 +769,13 @@ export default function AdminPage() {
       image_url: category.image_url || "",
       order_index: category.order_index || 0,
     })
+    setIsCategoryModalOpen(true)
   }
 
   const cancelEditCategory = () => {
     setEditingCategory(null)
     setNewCategory({ name: "", description: "", image_url: "", order_index: 0 })
+    setIsCategoryModalOpen(false)
   }
 
   const updateCategoryOrder = async (categoryId: number, direction: "up" | "down") => {
@@ -635,10 +844,21 @@ export default function AdminPage() {
     }
 
     try {
+      // Generate slug from name if slug is empty
+      const clubData = {
+        ...newClub,
+        slug: newClub.slug || newClub.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+      }
+
       const response = await fetch("/api/clubs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newClub),
+        body: JSON.stringify(clubData),
       })
 
       const data = await response.json()
@@ -653,6 +873,7 @@ export default function AdminPage() {
         type: "success",
       })
       setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
+      setIsClubModalOpen(false)
       loadClubs()
     } catch (error) {
       setAlertModal({
@@ -665,10 +886,21 @@ export default function AdminPage() {
 
   const updateClub = async (id: number) => {
     try {
+      // Generate slug from name if slug is empty
+      const clubData = {
+        ...newClub,
+        slug: newClub.slug || newClub.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+      }
+
       const response = await fetch(`/api/clubs/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newClub),
+        body: JSON.stringify(clubData),
       })
 
       const data = await response.json()
@@ -684,6 +916,7 @@ export default function AdminPage() {
       })
       setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
       setEditingClub(null)
+      setIsClubModalOpen(false)
       loadClubs()
     } catch (error) {
       setAlertModal({
@@ -731,11 +964,13 @@ export default function AdminPage() {
       logo_url: club.logo_url || "",
       order_index: club.order_index || 0,
     })
+    setIsClubModalOpen(true)
   }
 
   const cancelEditClub = () => {
     setEditingClub(null)
     setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
+    setIsClubModalOpen(false)
   }
 
   const updateClubOrder = async (clubId: number, direction: "up" | "down") => {
@@ -816,6 +1051,53 @@ export default function AdminPage() {
       setAlertModal({
         isOpen: true,
         message: error instanceof Error ? error.message : "Error al actualizar productos del club",
+        type: "error",
+      })
+    }
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    const oldIndex = products.findIndex((p) => p.id === active.id)
+    const newIndex = products.findIndex((p) => p.id === over.id)
+
+    // Optimistically update the UI
+    const newProducts = arrayMove(products, oldIndex, newIndex)
+    setProducts(newProducts)
+
+    // Update order_index for all affected products
+    const productOrders = newProducts.map((product, index) => ({
+      id: product.id,
+      order_index: index,
+    }))
+
+    try {
+      const response = await fetch("/api/products/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productOrders }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al reordenar productos")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Productos reordenados exitosamente",
+        type: "success",
+      })
+    } catch (error) {
+      // Revert the optimistic update on error
+      loadProducts()
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al reordenar productos",
         type: "error",
       })
     }
@@ -1017,374 +1299,63 @@ export default function AdminPage() {
           )}
 
           {activeTab === "products" && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  {editingProduct ? "Editar Producto" : "Agregar Nuevo Producto"}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold" style={{ color: "var(--gros-black)" }}>
+                  Productos ({products.length})
                 </h2>
+                <Button
+                  onClick={() => setIsProductModalOpen(true)}
+                  className="hover:opacity-90 font-bold"
+                  style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Nuevo Producto
+                </Button>
+              </div>
 
-                <Card className="p-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Nombre *
-                      </label>
-                      <Input
-                        value={newProduct.name}
-                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                        placeholder="Nombre del producto"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Categoría *
-                      </label>
-                      <select
-                        value={newProduct.category}
-                        onChange={(e) =>
-                          setNewProduct({
-                            ...newProduct,
-                            category: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded"
-                      >
-                        <option value="">Selecciona categoría</option>
-                        {categories
-                          .filter((cat) => cat.active)
-                          .map((category) => (
-                            <option key={category.id} value={category.name}>
-                              {category.name}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Precio *
-                      </label>
-                      <Input
-                        type="number"
-                        value={newProduct.price}
-                        onChange={(e) =>
-                          setNewProduct({
-                            ...newProduct,
-                            price: Number.parseFloat(e.target.value),
-                          })
-                        }
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Descripción
-                      </label>
-                      <textarea
-                        value={newProduct.description}
-                        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                        placeholder="Descripción del producto"
-                        className="w-full px-3 py-2 border border-gray-300 rounded min-h-[80px]"
-                      />
-                    </div>
-                    <div>
-                      <ImageUpload
-                        label="Imagen del Producto"
-                        value={newProduct.image_url}
-                        onChange={(url) => setNewProduct({ ...newProduct, image_url: url })}
-                        onRemove={() => setNewProduct({ ...newProduct, image_url: "" })}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Talles (separados por coma)
-                      </label>
-                      <Input
-                        value={sizesInput}
-                        onChange={(e) => setSizesInput(e.target.value)}
-                        onBlur={(e) => {
-                          const value = e.target.value.trim()
-                          const sizes = value ? value.split(",").map((s) => s.trim()).filter((s) => s) : []
-                          setNewProduct({
-                            ...newProduct,
-                            sizes,
-                          })
-                        }}
-                        placeholder="S, M, L, XL"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {Array.isArray(newProduct.sizes) && newProduct.sizes.length > 0
-                          ? `${newProduct.sizes.length} talle(s): ${newProduct.sizes.join(", ")}`
-                          : "Escribe los talles y presiona Tab o haz clic fuera"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Colores (separados por coma)
-                      </label>
-                      <Input
-                        value={colorsInput}
-                        onChange={(e) => setColorsInput(e.target.value)}
-                        onBlur={(e) => {
-                          const value = e.target.value.trim()
-                          const colors = value ? value.split(",").map((c) => c.trim()).filter((c) => c) : []
-                          setNewProduct({
-                            ...newProduct,
-                            colors,
-                          })
-                        }}
-                        placeholder="Rojo, Negro, Blanco, Azul"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {Array.isArray(newProduct.colors) && newProduct.colors.length > 0
-                          ? `${newProduct.colors.length} color(es): ${newProduct.colors.join(", ")}`
-                          : "Escribe los colores y presiona Tab o haz clic fuera"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Tipos de Tela (separados por coma)
-                      </label>
-                      <Input
-                        value={fabricsInput}
-                        onChange={(e) => setFabricsInput(e.target.value)}
-                        onBlur={(e) => {
-                          const value = e.target.value.trim()
-                          const fabrics = value ? value.split(",").map((f) => f.trim()).filter((f) => f) : []
-                          setNewProduct({
-                            ...newProduct,
-                            fabrics,
-                          })
-                        }}
-                        placeholder="Algodón, Poliéster, Lycra"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {Array.isArray(newProduct.fabrics) && newProduct.fabrics.length > 0
-                          ? `${newProduct.fabrics.length} tela(s): ${newProduct.fabrics.join(", ")}`
-                          : "Escribe los tipos de tela y presiona Tab o haz clic fuera"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Tiempo de Entrega
-                      </label>
-                      <Input
-                        value={newProduct.lead_time}
-                        onChange={(e) => setNewProduct({ ...newProduct, lead_time: e.target.value })}
-                        placeholder="7-10 días"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={newProduct.active}
-                        onChange={(e) => setNewProduct({ ...newProduct, active: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm font-bold" style={{ color: "var(--gros-black)" }}>
-                        Producto Activo
-                      </span>
-                    </label>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={editingProduct ? () => updateProduct(editingProduct) : addProduct}
-                      className="hover:opacity-90 font-bold"
-                      style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                    >
-                      <Plus className="mr-2 h-5 w-5" />
-                      {editingProduct ? "Actualizar Producto" : "Agregar Producto"}
-                    </Button>
-                    {editingProduct && (
-                      <Button
-                        onClick={cancelEditProduct}
-                        variant="outline"
-                        className="font-bold"
-                      >
-                        Cancelar
-                      </Button>
-                    )}
-                  </div>
+              {products.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-gray-500">No hay productos registrados</p>
                 </Card>
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  Productos Actuales ({products.length})
-                </h2>
-
-                <div className="space-y-4">
-                  {products.length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <p className="text-gray-500">No hay productos registrados</p>
-                    </Card>
-                  ) : (
-                    products.map((product) => (
-                      <Card key={product.id} className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-                          <div>
-                            <p className="text-xs text-gray-500 font-bold">NOMBRE</p>
-                            <p className="font-bold" style={{ color: "var(--gros-black)" }}>
-                              {product.name}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-bold">CATEGORÍA</p>
-                            <p className="font-bold" style={{ color: "var(--gros-black)" }}>
-                              {product.category}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-bold">PRECIO</p>
-                            <p className="font-bold text-lg" style={{ color: "var(--gros-red)" }}>
-                              ${product.price}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 font-bold">ESTADO</p>
-                            <p className={`font-bold ${product.active ? "text-green-600" : "text-gray-400"}`}>
-                              {product.active ? "Activo" : "Inactivo"}
-                            </p>
-                          </div>
-                          <div>
-                            <Button
-                              onClick={() => toggleProductActive(product.id, product.active)}
-                              variant="outline"
-                              className={`w-full ${
-                                product.active
-                                  ? "border-yellow-500 text-yellow-600 hover:bg-yellow-50"
-                                  : "border-green-500 text-green-600 hover:bg-green-50"
-                              }`}
-                            >
-                              {product.active ? "Desactivar" : "Activar"}
-                            </Button>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => startEditProduct(product)}
-                              variant="outline"
-                              className="border-gros-red text-gros-red hover:bg-gros-red/10 bg-transparent"
-                              style={{ borderColor: "var(--gros-red)", color: "var(--gros-red)" }}
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              onClick={() => deleteProduct(product.id)}
-                              variant="outline"
-                              className="border-red-500 text-red-500 hover:bg-red-50"
-                            >
-                              Eliminar
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </div>
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={products.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4">
+                      {products.map((product) => (
+                        <SortableProductCard
+                          key={product.id}
+                          product={product}
+                          onEdit={startEditProduct}
+                          onDelete={deleteProduct}
+                          onToggleActive={toggleProductActive}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
             </div>
           )}
 
           {activeTab === "categories" && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  {editingCategory ? "Editar Categoría" : "Agregar Nueva Categoría"}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold" style={{ color: "var(--gros-black)" }}>
+                  Categorías ({categories.length})
                 </h2>
-
-                <Card className="p-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Nombre
-                      </label>
-                      <Input
-                        value={newCategory.name}
-                        onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                        placeholder="Nombre de la categoría"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Orden
-                      </label>
-                      <Input
-                        type="number"
-                        value={newCategory.order_index}
-                        onChange={(e) =>
-                          setNewCategory({
-                            ...newCategory,
-                            order_index: Number.parseInt(e.target.value),
-                          })
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                      Descripción (Opcional)
-                    </label>
-                    <Input
-                      value={newCategory.description}
-                      onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                      placeholder="Descripción de la categoría"
-                    />
-                  </div>
-                  <div>
-                    <ImageUpload
-                      label="Imagen de la Categoría (Opcional)"
-                      value={newCategory.image_url}
-                      onChange={(url) => setNewCategory({ ...newCategory, image_url: url })}
-                      onRemove={() => setNewCategory({ ...newCategory, image_url: "" })}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    {editingCategory ? (
-                      <>
-                        <Button
-                          onClick={() => updateCategory(editingCategory)}
-                          className="hover:opacity-90 font-bold"
-                          style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                        >
-                          Actualizar Categoría
-                        </Button>
-                        <Button
-                          onClick={cancelEditCategory}
-                          variant="outline"
-                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                        >
-                          Cancelar
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        onClick={addCategory}
-                        className="hover:opacity-90 font-bold"
-                        style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                      >
-                        <Plus className="mr-2 h-5 w-5" />
-                        Agregar Categoría
-                      </Button>
-                    )}
-                  </div>
-                </Card>
+                <Button
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="hover:opacity-90 font-bold"
+                  style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Nueva Categoría
+                </Button>
               </div>
 
-              <div>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  Categorías Actuales
-                </h2>
-
-                <div className="space-y-4">
-                  {categories.map((category, idx) => (
+              <div className="space-y-4">
+                {categories.map((category, idx) => (
                     <Card key={category.id} className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
                         <div>
@@ -1449,118 +1420,30 @@ export default function AdminPage() {
                           </Button>
                         </div>
                       </div>
-                    </Card>
-                  ))}
-                </div>
+                  </Card>
+                ))}
               </div>
             </div>
           )}
 
           {activeTab === "clubs" && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  {editingClub ? "Editar Club" : "Agregar Nuevo Club"}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold" style={{ color: "var(--gros-black)" }}>
+                  Clubes ({clubs.length})
                 </h2>
-
-                <Card className="p-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Nombre *
-                      </label>
-                      <Input
-                        value={newClub.name}
-                        onChange={(e) => setNewClub({ ...newClub, name: e.target.value })}
-                        placeholder="Nombre del club"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Slug (Opcional - se genera automático)
-                      </label>
-                      <Input
-                        value={newClub.slug}
-                        onChange={(e) => setNewClub({ ...newClub, slug: e.target.value })}
-                        placeholder="depor-garcitas"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                      Descripción (Opcional)
-                    </label>
-                    <Input
-                      value={newClub.description}
-                      onChange={(e) => setNewClub({ ...newClub, description: e.target.value })}
-                      placeholder="Descripción del club"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <ImageUpload
-                        label="Logo del Club (Opcional)"
-                        value={newClub.logo_url}
-                        onChange={(url) => setNewClub({ ...newClub, logo_url: url })}
-                        onRemove={() => setNewClub({ ...newClub, logo_url: "" })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Orden
-                      </label>
-                      <Input
-                        type="number"
-                        value={newClub.order_index}
-                        onChange={(e) =>
-                          setNewClub({
-                            ...newClub,
-                            order_index: Number.parseInt(e.target.value),
-                          })
-                        }
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {editingClub ? (
-                      <>
-                        <Button
-                          onClick={() => updateClub(editingClub)}
-                          className="hover:opacity-90 font-bold"
-                          style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                        >
-                          Actualizar Club
-                        </Button>
-                        <Button
-                          onClick={cancelEditClub}
-                          variant="outline"
-                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                        >
-                          Cancelar
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        onClick={addClub}
-                        className="hover:opacity-90 font-bold"
-                        style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                      >
-                        <Plus className="mr-2 h-5 w-5" />
-                        Agregar Club
-                      </Button>
-                    )}
-                  </div>
-                </Card>
+                <Button
+                  onClick={() => setIsClubModalOpen(true)}
+                  className="hover:opacity-90 font-bold"
+                  style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Nuevo Club
+                </Button>
               </div>
 
-              <div>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  Clubes Actuales
-                </h2>
-
-                <div className="space-y-4">
-                  {clubs.map((club, idx) => (
+              <div className="space-y-4">
+                {clubs.map((club, idx) => (
                     <Card key={club.id} className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
                         <div>
@@ -1637,9 +1520,8 @@ export default function AdminPage() {
                           </Button>
                         </div>
                       </div>
-                    </Card>
-                  ))}
-                </div>
+                  </Card>
+                ))}
               </div>
 
               {selectedClubForProducts && (
@@ -1837,6 +1719,421 @@ export default function AdminPage() {
           )}
         </div>
       </section>
+
+      {/* Product Modal */}
+      <Modal
+        isOpen={isProductModalOpen}
+        onClose={cancelEditProduct}
+        title={editingProduct ? "Editar Producto" : "Nuevo Producto"}
+        size="xl"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Nombre *
+              </label>
+              <Input
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                placeholder="Nombre del producto"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Categoría *
+              </label>
+              <select
+                value={newProduct.category}
+                onChange={(e) =>
+                  setNewProduct({
+                    ...newProduct,
+                    category: e.target.value,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded"
+              >
+                <option value="">Selecciona categoría</option>
+                {categories
+                  .filter((cat) => cat.active)
+                  .map((category) => (
+                    <option key={category.id} value={category.name}>
+                      {category.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Precio *
+              </label>
+              <Input
+                type="number"
+                value={newProduct.price}
+                onChange={(e) =>
+                  setNewProduct({
+                    ...newProduct,
+                    price: Number.parseFloat(e.target.value),
+                  })
+                }
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Descripción
+              </label>
+              <textarea
+                value={newProduct.description}
+                onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                placeholder="Descripción del producto"
+                className="w-full px-3 py-2 border border-gray-300 rounded min-h-[80px]"
+              />
+            </div>
+            <div>
+              <ImageUpload
+                label="Imagen del Producto"
+                value={newProduct.image_url}
+                onChange={(url) => setNewProduct({ ...newProduct, image_url: url })}
+                onRemove={() => setNewProduct({ ...newProduct, image_url: "" })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Talles (separados por coma)
+              </label>
+              <Input
+                value={sizesInput}
+                onChange={(e) => setSizesInput(e.target.value)}
+                onBlur={(e) => {
+                  const value = e.target.value.trim()
+                  const sizes = value ? value.split(",").map((s) => s.trim()).filter((s) => s) : []
+                  setNewProduct({
+                    ...newProduct,
+                    sizes,
+                  })
+                }}
+                placeholder="S, M, L, XL"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {Array.isArray(newProduct.sizes) && newProduct.sizes.length > 0
+                  ? `${newProduct.sizes.length} talle(s): ${newProduct.sizes.join(", ")}`
+                  : "Escribe los talles y presiona Tab o haz clic fuera"}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Tipos de Tela y Precios
+              </label>
+              <div className="space-y-2">
+                {fabricEntries.map((entry, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <Input
+                      value={entry.name}
+                      onChange={(e) => {
+                        const newEntries = [...fabricEntries]
+                        newEntries[index].name = e.target.value
+                        setFabricEntries(newEntries)
+                      }}
+                      onBlur={() => {
+                        const fabricsObj: Record<string, number> = {}
+                        fabricEntries.forEach((entry) => {
+                          if (entry.name.trim() && entry.price.trim()) {
+                            fabricsObj[entry.name.trim()] = Number.parseFloat(entry.price) || 0
+                          }
+                        })
+                        setNewProduct({ ...newProduct, fabrics: fabricsObj })
+                      }}
+                      placeholder="Nombre (ej: Algodón)"
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      value={entry.price}
+                      onChange={(e) => {
+                        const newEntries = [...fabricEntries]
+                        newEntries[index].price = e.target.value
+                        setFabricEntries(newEntries)
+                      }}
+                      onBlur={() => {
+                        const fabricsObj: Record<string, number> = {}
+                        fabricEntries.forEach((entry) => {
+                          if (entry.name.trim() && entry.price.trim()) {
+                            fabricsObj[entry.name.trim()] = Number.parseFloat(entry.price) || 0
+                          }
+                        })
+                        setNewProduct({ ...newProduct, fabrics: fabricsObj })
+                      }}
+                      placeholder="Precio"
+                      className="w-32"
+                    />
+                    {fabricEntries.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newEntries = fabricEntries.filter((_, i) => i !== index)
+                          setFabricEntries(newEntries)
+                          const fabricsObj: Record<string, number> = {}
+                          newEntries.forEach((entry) => {
+                            if (entry.name.trim() && entry.price.trim()) {
+                              fabricsObj[entry.name.trim()] = Number.parseFloat(entry.price) || 0
+                            }
+                          })
+                          setNewProduct({ ...newProduct, fabrics: fabricsObj })
+                        }}
+                        className="border-red-500 text-red-500 hover:bg-red-50"
+                      >
+                        ✕
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFabricEntries([...fabricEntries, { name: "", price: "" }])}
+                  className="w-full"
+                >
+                  + Agregar Tipo de Tela
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {Object.keys(newProduct.fabrics).length > 0
+                  ? `${Object.keys(newProduct.fabrics).length} tipo(s) de tela configurado(s)`
+                  : "Agrega tipos de tela con sus respectivos precios"}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Clubes (Opcional)
+              </label>
+              <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-2">
+                {clubs.length === 0 ? (
+                  <p className="text-sm text-gray-500">No hay clubes disponibles</p>
+                ) : (
+                  clubs.map((club) => (
+                    <label key={club.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newProduct.club_ids.includes(club.id)}
+                        onChange={(e) => {
+                          const clubIds = e.target.checked
+                            ? [...newProduct.club_ids, club.id]
+                            : newProduct.club_ids.filter((id) => id !== club.id)
+                          setNewProduct({ ...newProduct, club_ids: clubIds })
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">{club.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {newProduct.club_ids.length > 0
+                  ? `${newProduct.club_ids.length} club(es) seleccionado(s)`
+                  : "Selecciona los clubes donde este producto estará disponible"}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Tiempo de Entrega
+              </label>
+              <Input
+                value={newProduct.lead_time}
+                onChange={(e) => setNewProduct({ ...newProduct, lead_time: e.target.value })}
+                placeholder="7-10 días"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={newProduct.active}
+                onChange={(e) => setNewProduct({ ...newProduct, active: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-bold" style={{ color: "var(--gros-black)" }}>
+                Producto Activo
+              </span>
+            </label>
+          </div>
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={editingProduct ? () => updateProduct(editingProduct) : addProduct}
+              className="hover:opacity-90 font-bold"
+              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+            >
+              {editingProduct ? "Actualizar Producto" : "Crear Producto"}
+            </Button>
+            <Button onClick={cancelEditProduct} variant="outline" className="font-bold">
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Category Modal */}
+      <Modal
+        isOpen={isCategoryModalOpen}
+        onClose={cancelEditCategory}
+        title={editingCategory ? "Editar Categoría" : "Nueva Categoría"}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Nombre *
+              </label>
+              <Input
+                value={newCategory.name}
+                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                placeholder="Nombre de la categoría"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Orden
+              </label>
+              <Input
+                type="number"
+                value={newCategory.order_index}
+                onChange={(e) =>
+                  setNewCategory({
+                    ...newCategory,
+                    order_index: Number.parseInt(e.target.value),
+                  })
+                }
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+              Descripción (Opcional)
+            </label>
+            <Input
+              value={newCategory.description}
+              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+              placeholder="Descripción de la categoría"
+            />
+          </div>
+          <div>
+            <ImageUpload
+              label="Imagen de la Categoría (Opcional)"
+              value={newCategory.image_url}
+              onChange={(url) => setNewCategory({ ...newCategory, image_url: url })}
+              onRemove={() => setNewCategory({ ...newCategory, image_url: "" })}
+            />
+          </div>
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={editingCategory ? () => updateCategory(editingCategory) : addCategory}
+              className="hover:opacity-90 font-bold"
+              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+            >
+              {editingCategory ? "Actualizar Categoría" : "Crear Categoría"}
+            </Button>
+            <Button onClick={cancelEditCategory} variant="outline" className="font-bold">
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Club Modal */}
+      <Modal
+        isOpen={isClubModalOpen}
+        onClose={cancelEditClub}
+        title={editingClub ? "Editar Club" : "Nuevo Club"}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Nombre *
+              </label>
+              <Input
+                value={newClub.name}
+                onChange={(e) => setNewClub({ ...newClub, name: e.target.value })}
+                placeholder="Nombre del club"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Slug (Opcional)
+              </label>
+              <Input
+                value={newClub.slug}
+                onChange={(e) => setNewClub({ ...newClub, slug: e.target.value })}
+                placeholder="depor-garcitas"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+              Descripción (Opcional)
+            </label>
+            <Input
+              value={newClub.description}
+              onChange={(e) => setNewClub({ ...newClub, description: e.target.value })}
+              placeholder="Descripción del club"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <ImageUpload
+                label="Logo del Club (Opcional)"
+                value={newClub.logo_url}
+                onChange={(url) => setNewClub({ ...newClub, logo_url: url })}
+                onRemove={() => setNewClub({ ...newClub, logo_url: "" })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Orden
+              </label>
+              <Input
+                type="number"
+                value={newClub.order_index}
+                onChange={(e) =>
+                  setNewClub({
+                    ...newClub,
+                    order_index: Number.parseInt(e.target.value),
+                  })
+                }
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={editingClub ? () => updateClub(editingClub) : addClub}
+              className="hover:opacity-90 font-bold"
+              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+            >
+              {editingClub ? "Actualizar Club" : "Crear Club"}
+            </Button>
+            <Button onClick={cancelEditClub} variant="outline" className="font-bold">
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Alert Modal */}
       <AlertModal
