@@ -39,43 +39,63 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
     const externalReference = `ORDER-${Date.now()}`
 
+    // Build back URLs
+    const successUrl = `${baseUrl}/checkout/success?method=mercadopago&ref=${externalReference}`
+    const failureUrl = `${baseUrl}/checkout/error?ref=${externalReference}`
+    const pendingUrl = `${baseUrl}/checkout/pending?ref=${externalReference}`
+
     // Create preference with all required data
     const preferenceData: any = {
       items: mpItems,
-      payer: {
-        name: customerData.name,
-        email: customerData.email,
-        phone: {
-          area_code: "",
-          number: customerData.phone,
-        },
-        address: {
-          street_name: customerData.address || "N/A",
-          zip_code: customerData.province || "N/A",
-        },
-      },
       back_urls: {
-        success: `${baseUrl}/checkout/success?method=mercadopago&ref=${externalReference}`,
-        failure: `${baseUrl}/checkout/error?ref=${externalReference}`,
-        pending: `${baseUrl}/checkout/pending?ref=${externalReference}`,
+        success: successUrl,
+        failure: failureUrl,
+        pending: pendingUrl,
       },
-      auto_return: "approved",
       external_reference: externalReference,
       statement_descriptor: "GROS INDUMENTARIA",
-      metadata: {
-        customer_name: customerData.name,
-        customer_email: customerData.email,
-        customer_phone: customerData.phone,
-        customer_address: customerData.address,
-        customer_province: customerData.province,
-        customer_notes: customerData.notes,
-      },
+    }
+
+    // Add payer information if available
+    if (customerData.name && customerData.email) {
+      preferenceData.payer = {
+        name: customerData.name,
+        email: customerData.email,
+      }
+
+      if (customerData.phone) {
+        preferenceData.payer.phone = {
+          area_code: "",
+          number: customerData.phone,
+        }
+      }
+
+      if (customerData.address) {
+        preferenceData.payer.address = {
+          street_name: customerData.address,
+          zip_code: customerData.province || "",
+        }
+      }
+    }
+
+    // Add metadata
+    preferenceData.metadata = {
+      customer_name: customerData.name,
+      customer_email: customerData.email,
+      customer_phone: customerData.phone,
+      customer_address: customerData.address,
+      customer_province: customerData.province,
+      customer_notes: customerData.notes,
+      delivery_method: customerData.deliveryMethod,
+      club_id: customerData.clubId,
     }
 
     // Only add notification_url if in production (localhost won't work)
     if (!baseUrl.includes("localhost")) {
       preferenceData.notification_url = `${baseUrl}/api/webhooks/mercadopago`
     }
+
+    console.log("Creating preference with data:", JSON.stringify(preferenceData, null, 2))
 
     // Create the preference
     const response = await preference.create({ body: preferenceData })
