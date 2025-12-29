@@ -9,6 +9,7 @@ import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder, Users, GripVert
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { MultipleImageUpload } from "@/components/ui/multiple-image-upload"
 import { Modal } from "@/components/ui/modal"
 import {
   DndContext,
@@ -204,6 +205,7 @@ export default function AdminPage() {
     description: "",
     price: 0,
     image_url: "",
+    images: [] as string[],
     sizes: [] as string[],
     fabrics: {} as Record<string, number>,
     lead_time: "7-10 días",
@@ -226,6 +228,8 @@ export default function AdminPage() {
     cta_text: "",
     cta_link: "",
   })
+  const [editingCarouselImage, setEditingCarouselImage] = useState<number | null>(null)
+  const [isCarouselModalOpen, setIsCarouselModalOpen] = useState(false)
 
   const [categories, setCategories] = useState<any[]>([])
   const [newCategory, setNewCategory] = useState({
@@ -546,6 +550,7 @@ export default function AdminPage() {
       description: product.description || "",
       price: product.price,
       image_url: product.image_url || "",
+      images: product.images || (product.image_url ? [product.image_url] : []),
       sizes: product.sizes || [],
       fabrics: product.fabrics || {},
       lead_time: product.lead_time || "7-10 días",
@@ -578,6 +583,7 @@ export default function AdminPage() {
       description: "",
       price: 0,
       image_url: "",
+      images: [],
       sizes: [],
       fabrics: {},
       lead_time: "7-10 días",
@@ -642,6 +648,56 @@ export default function AdminPage() {
       cta_text: "",
       cta_link: "",
     })
+    setIsCarouselModalOpen(false)
+  }
+
+  const updateCarouselImage = (id: number) => {
+    if (!newCarouselImage.title || !newCarouselImage.image_url) {
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor completa título e imagen",
+        type: "error",
+      })
+      return
+    }
+    setCarouselImages(
+      carouselImages.map((img) =>
+        img.id === id ? { ...img, ...newCarouselImage } : img
+      )
+    )
+    setNewCarouselImage({
+      title: "",
+      description: "",
+      image_url: "",
+      cta_text: "",
+      cta_link: "",
+    })
+    setEditingCarouselImage(null)
+    setIsCarouselModalOpen(false)
+  }
+
+  const startEditCarouselImage = (image: any) => {
+    setEditingCarouselImage(image.id)
+    setNewCarouselImage({
+      title: image.title,
+      description: image.description || "",
+      image_url: image.image_url || "",
+      cta_text: image.cta_text || "",
+      cta_link: image.cta_link || "",
+    })
+    setIsCarouselModalOpen(true)
+  }
+
+  const cancelEditCarouselImage = () => {
+    setEditingCarouselImage(null)
+    setNewCarouselImage({
+      title: "",
+      description: "",
+      image_url: "",
+      cta_text: "",
+      cta_link: "",
+    })
+    setIsCarouselModalOpen(false)
   }
 
   const deleteCarouselImage = (imageId: number) => {
@@ -1587,133 +1643,92 @@ export default function AdminPage() {
           )}
 
           {activeTab === "carousel" && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  Agregar Imagen al Carrusel
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold" style={{ color: "var(--gros-black)" }}>
+                  Imágenes del Carrusel ({carouselImages.length})
                 </h2>
-
-                <Card className="p-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Título
-                      </label>
-                      <Input
-                        value={newCarouselImage.title}
-                        onChange={(e) => setNewCarouselImage({ ...newCarouselImage, title: e.target.value })}
-                        placeholder="Título del slide"
-                      />
-                    </div>
-                    <div>
-                      <ImageUpload
-                        label="Imagen del Carrusel"
-                        value={newCarouselImage.image_url}
-                        onChange={(url) => setNewCarouselImage({ ...newCarouselImage, image_url: url })}
-                        onRemove={() => setNewCarouselImage({ ...newCarouselImage, image_url: "" })}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                      Descripción (Opcional)
-                    </label>
-                    <Input
-                      value={newCarouselImage.description}
-                      onChange={(e) => setNewCarouselImage({ ...newCarouselImage, description: e.target.value })}
-                      placeholder="Descripción del slide"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Texto del Botón (Opcional)
-                      </label>
-                      <Input
-                        value={newCarouselImage.cta_text}
-                        onChange={(e) => setNewCarouselImage({ ...newCarouselImage, cta_text: e.target.value })}
-                        placeholder="Ver Catálogo"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                        Link del Botón (Opcional)
-                      </label>
-                      <Input
-                        value={newCarouselImage.cta_link}
-                        onChange={(e) => setNewCarouselImage({ ...newCarouselImage, cta_link: e.target.value })}
-                        placeholder="/clubes"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={addCarouselImage}
-                    className="hover:opacity-90 font-bold w-full"
-                    style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                  >
-                    <Plus className="mr-2 h-5 w-5" />
-                    Agregar Imagen
-                  </Button>
-                </Card>
+                <Button
+                  onClick={() => setIsCarouselModalOpen(true)}
+                  className="hover:opacity-90 font-bold"
+                  style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Nueva Imagen
+                </Button>
               </div>
 
-              <div>
-                <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                  Imágenes del Carrusel
-                </h2>
-
-                <div className="space-y-4">
-                  {carouselImages.map((image, idx) => (
-                    <Card key={image.id} className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-500 font-bold">TÍTULO</p>
-                          <p className="font-bold" style={{ color: "var(--gros-black)" }}>
-                            {image.title}
+              <div className="space-y-4">
+                {carouselImages.map((image, idx) => (
+                  <Card key={image.id} className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold">TÍTULO</p>
+                        <p className="font-bold" style={{ color: "var(--gros-black)" }}>
+                          {image.title}
+                        </p>
+                        {image.description && <p className="text-sm text-gray-600 mt-1">{image.description}</p>}
+                        {image.cta_text && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            CTA: {image.cta_text} → {image.cta_link}
                           </p>
-                          {image.description && <p className="text-sm text-gray-600">{image.description}</p>}
-                        </div>
-                        <div className="md:col-span-1">
-                          <img
-                            src={image.image_url || "/placeholder.svg"}
-                            alt={image.title}
-                            className="w-full h-24 object-cover rounded"
-                          />
-                        </div>
-                        <div className="flex gap-2 flex-wrap md:flex-col items-start justify-between">
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => updateCarouselOrder(image.id, "up")}
-                              disabled={idx === 0}
-                              className="hover:opacity-90"
-                              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                            >
-                              ↑
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => updateCarouselOrder(image.id, "down")}
-                              disabled={idx === carouselImages.length - 1}
-                              className="hover:opacity-90"
-                              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                            >
-                              ↓
-                            </Button>
-                          </div>
+                        )}
+                      </div>
+                      <div className="md:col-span-1">
+                        <img
+                          src={image.image_url || "/placeholder.svg"}
+                          alt={image.title}
+                          className="w-full h-32 object-cover rounded"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-bold">ORDEN</p>
+                        <p className="font-bold" style={{ color: "var(--gros-red)" }}>
+                          {image.order_index}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <div className="flex gap-1">
                           <Button
-                            onClick={() => deleteCarouselImage(image.id)}
-                            variant="outline"
                             size="sm"
-                            className="border-red-500 text-red-500 hover:bg-red-50"
+                            onClick={() => updateCarouselOrder(image.id, "up")}
+                            disabled={idx === 0}
+                            className="hover:opacity-90"
+                            style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
                           >
-                            Eliminar
+                            ↑
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => updateCarouselOrder(image.id, "down")}
+                            disabled={idx === carouselImages.length - 1}
+                            className="hover:opacity-90"
+                            style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                          >
+                            ↓
                           </Button>
                         </div>
+                        <Button
+                          size="sm"
+                          onClick={() => startEditCarouselImage(image)}
+                          variant="outline"
+                          className="border-gros-red text-gros-red hover:bg-gros-red/10 bg-transparent"
+                          style={{ borderColor: "var(--gros-red)", color: "var(--gros-red)" }}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          onClick={() => deleteCarouselImage(image.id)}
+                          variant="outline"
+                          size="sm"
+                          className="border-red-500 text-red-500 hover:bg-red-50"
+                        >
+                          Eliminar
+                        </Button>
                       </div>
-                    </Card>
-                  ))}
-                </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             </div>
           )}
@@ -1793,11 +1808,11 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <ImageUpload
-                label="Imagen del Producto"
-                value={newProduct.image_url}
-                onChange={(url) => setNewProduct({ ...newProduct, image_url: url })}
-                onRemove={() => setNewProduct({ ...newProduct, image_url: "" })}
+              <MultipleImageUpload
+                label="Imágenes del Producto"
+                value={newProduct.images}
+                onChange={(urls) => setNewProduct({ ...newProduct, images: urls, image_url: urls[0] || "" })}
+                maxImages={5}
               />
             </div>
           </div>
@@ -2129,6 +2144,81 @@ export default function AdminPage() {
               {editingClub ? "Actualizar Club" : "Crear Club"}
             </Button>
             <Button onClick={cancelEditClub} variant="outline" className="font-bold">
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Carousel Modal */}
+      <Modal
+        isOpen={isCarouselModalOpen}
+        onClose={cancelEditCarouselImage}
+        title={editingCarouselImage ? "Editar Imagen del Carrusel" : "Nueva Imagen del Carrusel"}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Título *
+              </label>
+              <Input
+                value={newCarouselImage.title}
+                onChange={(e) => setNewCarouselImage({ ...newCarouselImage, title: e.target.value })}
+                placeholder="Título del slide"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Descripción (Opcional)
+              </label>
+              <Input
+                value={newCarouselImage.description}
+                onChange={(e) => setNewCarouselImage({ ...newCarouselImage, description: e.target.value })}
+                placeholder="Descripción del slide"
+              />
+            </div>
+          </div>
+          <div>
+            <ImageUpload
+              label="Imagen del Carrusel *"
+              value={newCarouselImage.image_url}
+              onChange={(url) => setNewCarouselImage({ ...newCarouselImage, image_url: url })}
+              onRemove={() => setNewCarouselImage({ ...newCarouselImage, image_url: "" })}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Texto del Botón (Opcional)
+              </label>
+              <Input
+                value={newCarouselImage.cta_text}
+                onChange={(e) => setNewCarouselImage({ ...newCarouselImage, cta_text: e.target.value })}
+                placeholder="Ver Catálogo"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Link del Botón (Opcional)
+              </label>
+              <Input
+                value={newCarouselImage.cta_link}
+                onChange={(e) => setNewCarouselImage({ ...newCarouselImage, cta_link: e.target.value })}
+                placeholder="/clubes"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={editingCarouselImage ? () => updateCarouselImage(editingCarouselImage) : addCarouselImage}
+              className="hover:opacity-90 font-bold"
+              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+            >
+              {editingCarouselImage ? "Actualizar Imagen" : "Crear Imagen"}
+            </Button>
+            <Button onClick={cancelEditCarouselImage} variant="outline" className="font-bold">
               Cancelar
             </Button>
           </div>

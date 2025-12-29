@@ -56,7 +56,9 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
           // Transform product data - fabrics is now an object with prices
           const transformedProduct = {
             ...foundProduct,
-            images: foundProduct.image_url ? [foundProduct.image_url] : ["/placeholder.svg"],
+            images: foundProduct.images && foundProduct.images.length > 0
+              ? foundProduct.images
+              : (foundProduct.image_url ? [foundProduct.image_url] : ["/placeholder.svg"]),
             sizes: foundProduct.sizes || ["S", "M", "L", "XL"],
             fabrics: foundProduct.fabrics || {},
             leadTime: foundProduct.lead_time || "7-10 días",

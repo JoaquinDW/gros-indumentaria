@@ -25,6 +25,7 @@ export async function PATCH(
       description,
       price,
       image_url,
+      images,
       sizes,
       colors,
       fabrics,
@@ -32,13 +33,31 @@ export async function PATCH(
       active,
     } = body
 
+    // Validate images array if provided
+    if (images !== undefined && (!Array.isArray(images) || images.length > 5)) {
+      return NextResponse.json(
+        { error: "Las imágenes deben ser un array de máximo 5 elementos" },
+        { status: 400 }
+      )
+    }
+
     // Build update object with only provided fields
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (category !== undefined) updateData.category = category
     if (description !== undefined) updateData.description = description
     if (price !== undefined) updateData.price = price
-    if (image_url !== undefined) updateData.image_url = image_url
+
+    // Handle images update
+    if (images !== undefined) {
+      updateData.images = images
+      updateData.image_url = images[0] || null // Keep first image in image_url for backward compatibility
+    } else if (image_url !== undefined) {
+      updateData.image_url = image_url
+      // Also update images array to include the new image_url
+      updateData.images = image_url ? [image_url] : []
+    }
+
     if (sizes !== undefined) updateData.sizes = sizes
     if (colors !== undefined) updateData.colors = colors
     if (fabrics !== undefined) updateData.fabrics = fabrics

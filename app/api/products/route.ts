@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       description,
       price,
       image_url,
+      images,
       sizes,
       fabrics,
       lead_time,
@@ -87,6 +88,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate images array if provided
+    if (images && (!Array.isArray(images) || images.length > 5)) {
+      return NextResponse.json(
+        { error: "Las imágenes deben ser un array de máximo 5 elementos" },
+        { status: 400 }
+      )
+    }
+
+    // Build images array: use images if provided, otherwise create from image_url for backward compatibility
+    const productImages = images || (image_url ? [image_url] : [])
+
     const { data: product, error } = await supabase
       .from("products")
       .insert({
@@ -94,7 +106,8 @@ export async function POST(request: NextRequest) {
         category,
         description: description || null,
         price,
-        image_url: image_url || null,
+        image_url: productImages[0] || null, // Keep first image in image_url for backward compatibility
+        images: productImages,
         sizes: sizes || [],
         fabrics: fabrics || {},
         lead_time: lead_time || "7-10 días",
