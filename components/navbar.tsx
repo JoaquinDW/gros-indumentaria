@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Menu, X, ShoppingCart, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/hooks/use-cart"
@@ -65,9 +66,14 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="text-2xl font-bold font-serif" style={{ color: "var(--gros-red)" }}>
-              GROS
-            </div>
+            <Image
+              src="/gros-logo.jpg"
+              alt="GROS Indumentaria"
+              width={56}
+              height={56}
+              className="h-14 w-14 object-cover rounded-full"
+              priority
+            />
           </Link>
 
           {/* Desktop Navigation */}
