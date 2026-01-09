@@ -47,22 +47,37 @@ export default function ClubPage() {
   }
 
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = !selectedCategory || product.category === selectedCategory
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+    const matchesCategory =
+      !selectedCategory || product.category === selectedCategory
     return matchesSearch && matchesCategory
   })
 
   return (
-    <div style={{ backgroundColor: "var(--gros-white)" }} className="min-h-screen">
+    <div
+      style={{ backgroundColor: "var(--gros-white)" }}
+      className="min-h-screen"
+    >
       <Navbar />
 
       {/* Header */}
-      <header className="text-white py-8 px-4 md:px-8" style={{ backgroundColor: "var(--gros-red)" }}>
+      <header
+        className="text-white py-8 px-4 md:px-8"
+        style={{ backgroundColor: "var(--gros-red)" }}
+      >
         <div className="max-w-7xl mx-auto">
-          <Link href="/" className="text-sm mb-4 inline-block hover:opacity-90" style={{ color: "#f0f0f0" }}>
+          <Link
+            href="/"
+            className="text-sm mb-4 inline-block hover:opacity-90"
+            style={{ color: "#f0f0f0" }}
+          >
             ← Volver al inicio
           </Link>
-          <h1 className="text-4xl md:text-5xl font-bold font-serif">Catálogo de Clubes</h1>
+          <h1 className="text-4xl md:text-5xl font-bold font-serif">
+            Catálogo de Clubes
+          </h1>
           <p className="text-lg mt-2" style={{ color: "#f0f0f0" }}>
             Prendas personalizables para tu club
           </p>
@@ -76,7 +91,7 @@ export default function ClubPage() {
       >
         <div className="max-w-7xl mx-auto space-y-4">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 top-2 h-5 w-5 text-gray-400" />
             <Input
               placeholder="Buscar productos..."
               value={searchQuery}
@@ -89,7 +104,14 @@ export default function ClubPage() {
             <Button
               variant={selectedCategory === "" ? "default" : "outline"}
               onClick={() => setSelectedCategory("")}
-              style={selectedCategory === "" ? { backgroundColor: "var(--gros-red)", color: "var(--gros-white)" } : {}}
+              style={
+                selectedCategory === ""
+                  ? {
+                      backgroundColor: "var(--gros-red)",
+                      color: "var(--gros-white)",
+                    }
+                  : {}
+              }
               className="hover:opacity-90"
             >
               Todos
@@ -97,11 +119,16 @@ export default function ClubPage() {
             {categories.map((category) => (
               <Button
                 key={category.id}
-                variant={selectedCategory === category.name ? "default" : "outline"}
+                variant={
+                  selectedCategory === category.name ? "default" : "outline"
+                }
                 onClick={() => setSelectedCategory(category.name)}
                 style={
                   selectedCategory === category.name
-                    ? { backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }
+                    ? {
+                        backgroundColor: "var(--gros-red)",
+                        color: "var(--gros-white)",
+                      }
                     : {}
                 }
                 className="hover:opacity-90"
@@ -138,9 +165,15 @@ export default function ClubPage() {
                     className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer group"
                     style={{ backgroundColor: "var(--gros-white)" }}
                   >
-                    <div className="relative overflow-hidden" style={{ backgroundColor: "var(--gros-sand)" }}>
+                    <div
+                      className="relative overflow-hidden"
+                      style={{ backgroundColor: "var(--gros-sand)" }}
+                    >
                       <img
-                        src={product.image_url || "/placeholder.svg?height=256&width=256&query=product"}
+                        src={
+                          product.image_url ||
+                          "/placeholder.svg?height=256&width=256&query=product"
+                        }
                         alt={product.name}
                         className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
                       />
@@ -152,22 +185,35 @@ export default function ClubPage() {
                       </div>
                     </div>
                     <div className="p-4">
-                      <p className="text-xs font-bold uppercase mb-2" style={{ color: "var(--gros-blue)" }}>
+                      <p
+                        className="text-xs font-bold uppercase mb-2"
+                        style={{ color: "var(--gros-blue)" }}
+                      >
                         {product.category}
                       </p>
-                      <h3 className="text-lg font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                      <h3
+                        className="text-lg font-bold mb-2"
+                        style={{ color: "var(--gros-black)" }}
+                      >
                         {product.name}
                       </h3>
                       <p className="text-sm mb-4" style={{ color: "#666666" }}>
-                        {product.description || "Producto personalizable de alta calidad"}
+                        {product.description ||
+                          "Producto personalizable de alta calidad"}
                       </p>
                       <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold" style={{ color: "var(--gros-red)" }}>
+                        <span
+                          className="text-2xl font-bold"
+                          style={{ color: "var(--gros-red)" }}
+                        >
                           ${product.price}
                         </span>
                         <Button
                           size="sm"
-                          style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                          style={{
+                            backgroundColor: "var(--gros-red)",
+                            color: "var(--gros-white)",
+                          }}
                           className="hover:opacity-90"
                         >
                           Ver Detalle
@@ -183,7 +229,10 @@ export default function ClubPage() {
       </section>
 
       {/* Footer */}
-      <footer className="text-white py-8 px-4 md:px-8" style={{ backgroundColor: "var(--gros-black)" }}>
+      <footer
+        className="text-white py-8 px-4 md:px-8"
+        style={{ backgroundColor: "var(--gros-black)" }}
+      >
         <div className="max-w-7xl mx-auto text-center">
           <p className="mb-2">Gros Indumentaria © 2025</p>
           <p style={{ color: "#999999" }}>Prendas Personalizadas de Calidad</p>

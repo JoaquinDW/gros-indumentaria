@@ -90,6 +90,15 @@
   --font-serif: "Montserrat", serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback";
 
+  /* Gros brand colors for Tailwind */
+  --color-gros-red: var(--gros-red);
+  --color-gros-maroon: var(--gros-maroon);
+  --color-gros-sand: var(--gros-sand);
+  --color-gros-black: var(--gros-black);
+  --color-gros-white: var(--gros-white);
+  --color-gros-blue: var(--gros-blue);
+  --color-gros-light-blue: var(--gros-light-blue);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
