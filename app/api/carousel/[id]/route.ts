@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 // PATCH - Update a carousel image
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
 
@@ -14,7 +14,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = await params
     const body = await request.json()
     const { title, image_url, description, cta_text, cta_link, order_index, active } = body
 
@@ -58,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 // DELETE - Delete a carousel image
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
 
@@ -70,7 +70,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = await params
 
     const { error } = await supabase.from("carousel_images").delete().eq("id", id)
 

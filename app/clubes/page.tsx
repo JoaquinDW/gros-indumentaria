@@ -159,31 +159,39 @@ export default function ClubPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <Link key={product.id} href={`/producto/${product.id}`}>
-                  <Card
-                    className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer group"
-                    style={{ backgroundColor: "var(--gros-white)" }}
-                  >
-                    <div
-                      className="relative overflow-hidden"
-                      style={{ backgroundColor: "var(--gros-sand)" }}
+              {filteredProducts.map((product) => {
+                // Get first image position if available
+                const firstPosition = product.image_positions?.[0] || { x: 50, y: 50, scale: 1 }
+
+                return (
+                  <Link key={product.id} href={`/producto/${product.id}`}>
+                    <Card
+                      className="h-full overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer group"
+                      style={{ backgroundColor: "var(--gros-white)" }}
                     >
-                      <img
-                        src={
-                          product.image_url ||
-                          "/placeholder.svg?height=256&width=256&query=product"
-                        }
-                        alt={product.name}
-                        className="w-full h-80 object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
                       <div
-                        className="absolute top-4 right-0 text-white px-4 py-2 transform rotate-45 origin-right translate-x-12 text-sm font-bold"
-                        style={{ backgroundColor: "var(--gros-red)" }}
+                        className="relative overflow-hidden aspect-[3/4]"
+                        style={{ backgroundColor: "var(--gros-sand)" }}
                       >
-                        PERSONALIZADO
+                        <img
+                          src={
+                            product.image_url ||
+                            "/placeholder.svg?height=256&width=256&query=product"
+                          }
+                          alt={product.name}
+                          className="w-full h-full object-contain transition-transform duration-300"
+                          style={{
+                            objectPosition: `${firstPosition.x}% ${firstPosition.y}%`,
+                            transform: `scale(${firstPosition.scale})`,
+                          }}
+                        />
+                        <div
+                          className="absolute top-4 right-0 text-white px-4 py-2 transform rotate-45 origin-right translate-x-12 text-sm font-bold"
+                          style={{ backgroundColor: "var(--gros-red)" }}
+                        >
+                          PERSONALIZADO
+                        </div>
                       </div>
-                    </div>
                     <div className="p-4">
                       <p
                         className="text-xs font-bold uppercase mb-2"
@@ -225,7 +233,8 @@ export default function ClubPage() {
                     </div>
                   </Card>
                 </Link>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

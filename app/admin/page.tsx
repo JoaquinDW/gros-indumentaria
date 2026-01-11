@@ -11,6 +11,7 @@ import { AlertModal } from "@/components/ui/alert-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { MultipleImageUpload } from "@/components/ui/multiple-image-upload"
+import { ImagePositionEditor } from "@/components/ui/image-position-editor"
 import { Modal } from "@/components/ui/modal"
 import {
   DndContext,
@@ -198,6 +199,7 @@ export default function AdminPage() {
     price: 0,
     image_url: "",
     images: [] as string[],
+    image_positions: [] as Array<{ x: number; y: number; scale: number }>,
     sizes: [] as string[],
     fabrics: {} as Record<string, number>,
     lead_time: "7-10 días",
@@ -404,6 +406,8 @@ export default function AdminPage() {
         description: "",
         price: 0,
         image_url: "",
+        images: [],
+        image_positions: [],
         sizes: [],
         fabrics: {},
         lead_time: "7-10 días",
@@ -486,6 +490,8 @@ export default function AdminPage() {
         description: "",
         price: 0,
         image_url: "",
+        images: [],
+        image_positions: [],
         sizes: [],
         fabrics: {},
         lead_time: "7-10 días",
@@ -561,6 +567,7 @@ export default function AdminPage() {
       price: product.price,
       image_url: product.image_url || "",
       images: product.images || (product.image_url ? [product.image_url] : []),
+      image_positions: product.image_positions || [],
       sizes: product.sizes || [],
       fabrics: product.fabrics || {},
       lead_time: product.lead_time || "7-10 días",
@@ -594,6 +601,7 @@ export default function AdminPage() {
       price: 0,
       image_url: "",
       images: [],
+      image_positions: [],
       sizes: [],
       fabrics: {},
       lead_time: "7-10 días",
@@ -1919,10 +1927,18 @@ export default function AdminPage() {
               />
             </div>
             <div>
-              <MultipleImageUpload
+              <ImagePositionEditor
                 label="Imágenes del Producto"
                 value={newProduct.images}
-                onChange={(urls) => setNewProduct({ ...newProduct, images: urls, image_url: urls[0] || "" })}
+                positions={newProduct.image_positions}
+                onChange={(urls, positions) =>
+                  setNewProduct({
+                    ...newProduct,
+                    images: urls,
+                    image_positions: positions,
+                    image_url: urls[0] || ""
+                  })
+                }
                 maxImages={5}
               />
             </div>
