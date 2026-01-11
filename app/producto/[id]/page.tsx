@@ -59,6 +59,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
             images: foundProduct.images && foundProduct.images.length > 0
               ? foundProduct.images
               : (foundProduct.image_url ? [foundProduct.image_url] : ["/placeholder.svg"]),
+            image_positions: foundProduct.image_positions || [],
             sizes: foundProduct.sizes || ["S", "M", "L", "XL"],
             fabrics: foundProduct.fabrics || {},
             leadTime: foundProduct.lead_time || "7-10 días",
@@ -208,27 +209,46 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
           {/* Image Gallery */}
           <div className="space-y-4">
             <div
-              className="rounded-lg overflow-hidden h-96 md:h-[500px]"
+              className="rounded-lg overflow-hidden aspect-[3/4]"
               style={{ backgroundColor: "var(--gros-sand)" }}
             >
               <img
                 src={product.images[selectedImage] || "/placeholder.svg?height=500&width=500&query=product"}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
+                style={
+                  product.image_positions?.[selectedImage]
+                    ? {
+                        objectPosition: `${product.image_positions[selectedImage].x}% ${product.image_positions[selectedImage].y}%`,
+                        transform: `scale(${product.image_positions[selectedImage].scale})`,
+                      }
+                    : {}
+                }
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto">
               {product.images.map((image: string, idx: number) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(idx)}
-                  className="h-20 w-20 rounded-lg overflow-hidden border-2 transition"
-                  style={{ borderColor: selectedImage === idx ? "var(--gros-red)" : "#e0e0e0" }}
+                  className="h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition"
+                  style={{
+                    borderColor: selectedImage === idx ? "var(--gros-red)" : "#e0e0e0",
+                    backgroundColor: "var(--gros-sand)"
+                  }}
                 >
                   <img
                     src={image || "/placeholder.svg?height=80&width=80&query=product"}
                     alt={`${product.name} ${idx}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
+                    style={
+                      product.image_positions?.[idx]
+                        ? {
+                            objectPosition: `${product.image_positions[idx].x}% ${product.image_positions[idx].y}%`,
+                            transform: `scale(${product.image_positions[idx].scale})`,
+                          }
+                        : {}
+                    }
                   />
                 </button>
               ))}
