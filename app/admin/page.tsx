@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder, Users, GripVertical } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { MultipleImageUpload } from "@/components/ui/multiple-image-upload"
 import { Modal } from "@/components/ui/modal"
@@ -152,6 +153,18 @@ export default function AdminPage() {
     type: "info",
   })
 
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => void
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  })
+
   // Mock data
   const [orders, setOrders] = useState([
     {
@@ -176,28 +189,7 @@ export default function AdminPage() {
 
   const [products, setProducts] = useState<any[]>([])
 
-  const [carouselImages, setCarouselImages] = useState([
-    {
-      id: 1,
-      title: "Prendas Personalizadas",
-      image_url: "/remera-deportiva-personalizada.jpg",
-      description: "Gráfica textil, sublimación y confección",
-      cta_text: "Ver Catálogo",
-      cta_link: "/clubes",
-      order_index: 1,
-      active: true,
-    },
-    {
-      id: 2,
-      title: "Diseños Únicos",
-      image_url: "/buzo-deportivo-personalizado.jpg",
-      description: "Personaliza tus prendas",
-      cta_text: "Explorar",
-      cta_link: "/clubes",
-      order_index: 2,
-      active: true,
-    },
-  ])
+  const [carouselImages, setCarouselImages] = useState<any[]>([])
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -285,6 +277,7 @@ export default function AdminPage() {
       loadCategories()
       loadProducts()
       loadClubs()
+      loadCarouselImages()
     }
   }, [isLoggedIn])
 
@@ -309,6 +302,18 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error("Error loading products:", error)
+    }
+  }
+
+  const loadCarouselImages = async () => {
+    try {
+      const response = await fetch("/api/carousel")
+      const data = await response.json()
+      if (data.carouselImages) {
+        setCarouselImages(data.carouselImages)
+      }
+    } catch (error) {
+      console.error("Error loading carousel images:", error)
     }
   }
 
@@ -502,31 +507,36 @@ export default function AdminPage() {
   }
 
   const deleteProduct = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar este producto?")) return
+    setConfirmDialog({
+      isOpen: true,
+      title: "Eliminar Producto",
+      message: "¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/products/${id}`, {
+            method: "DELETE",
+          })
 
-    try {
-      const response = await fetch(`/api/products/${id}`, {
-        method: "DELETE",
-      })
+          if (!response.ok) {
+            const data = await response.json()
+            throw new Error(data.error || "Error al eliminar producto")
+          }
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Error al eliminar producto")
-      }
-
-      setAlertModal({
-        isOpen: true,
-        message: "Producto eliminado exitosamente",
-        type: "success",
-      })
-      loadProducts()
-    } catch (error) {
-      setAlertModal({
-        isOpen: true,
-        message: error instanceof Error ? error.message : "Error al eliminar producto",
-        type: "error",
-      })
-    }
+          setAlertModal({
+            isOpen: true,
+            message: "Producto eliminado exitosamente",
+            type: "success",
+          })
+          loadProducts()
+        } catch (error) {
+          setAlertModal({
+            isOpen: true,
+            message: error instanceof Error ? error.message : "Error al eliminar producto",
+            type: "error",
+          })
+        }
+      },
+    })
   }
 
   const startEditProduct = async (product: any) => {
@@ -623,7 +633,7 @@ export default function AdminPage() {
     }
   }
 
-  const addCarouselImage = () => {
+  const addCarouselImage = async () => {
     if (!newCarouselImage.title || !newCarouselImage.image_url) {
       setAlertModal({
         isOpen: true,
@@ -632,26 +642,48 @@ export default function AdminPage() {
       })
       return
     }
-    setCarouselImages([
-      ...carouselImages,
-      {
-        id: carouselImages.length + 1,
-        ...newCarouselImage,
-        order_index: carouselImages.length + 1,
-        active: true,
-      },
-    ])
-    setNewCarouselImage({
-      title: "",
-      description: "",
-      image_url: "",
-      cta_text: "",
-      cta_link: "",
-    })
-    setIsCarouselModalOpen(false)
+
+    try {
+      const response = await fetch("/api/carousel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...newCarouselImage,
+          order_index: carouselImages.length,
+          active: true,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al crear imagen del carrusel")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Imagen del carrusel creada exitosamente",
+        type: "success",
+      })
+      setNewCarouselImage({
+        title: "",
+        description: "",
+        image_url: "",
+        cta_text: "",
+        cta_link: "",
+      })
+      setIsCarouselModalOpen(false)
+      loadCarouselImages()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al crear imagen del carrusel",
+        type: "error",
+      })
+    }
   }
 
-  const updateCarouselImage = (id: number) => {
+  const updateCarouselImage = async (id: number) => {
     if (!newCarouselImage.title || !newCarouselImage.image_url) {
       setAlertModal({
         isOpen: true,
@@ -660,20 +692,42 @@ export default function AdminPage() {
       })
       return
     }
-    setCarouselImages(
-      carouselImages.map((img) =>
-        img.id === id ? { ...img, ...newCarouselImage } : img
-      )
-    )
-    setNewCarouselImage({
-      title: "",
-      description: "",
-      image_url: "",
-      cta_text: "",
-      cta_link: "",
-    })
-    setEditingCarouselImage(null)
-    setIsCarouselModalOpen(false)
+
+    try {
+      const response = await fetch(`/api/carousel/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCarouselImage),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al actualizar imagen del carrusel")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Imagen del carrusel actualizada exitosamente",
+        type: "success",
+      })
+      setNewCarouselImage({
+        title: "",
+        description: "",
+        image_url: "",
+        cta_text: "",
+        cta_link: "",
+      })
+      setEditingCarouselImage(null)
+      setIsCarouselModalOpen(false)
+      loadCarouselImages()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al actualizar imagen del carrusel",
+        type: "error",
+      })
+    }
   }
 
   const startEditCarouselImage = (image: any) => {
@@ -700,21 +754,68 @@ export default function AdminPage() {
     setIsCarouselModalOpen(false)
   }
 
-  const deleteCarouselImage = (imageId: number) => {
-    setCarouselImages(carouselImages.filter((img) => img.id !== imageId))
+  const deleteCarouselImage = async (imageId: number) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Eliminar Imagen",
+      message: "¿Estás seguro de que deseas eliminar esta imagen del carrusel? Esta acción no se puede deshacer.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/carousel/${imageId}`, {
+            method: "DELETE",
+          })
+
+          if (!response.ok) {
+            const data = await response.json()
+            throw new Error(data.error || "Error al eliminar imagen del carrusel")
+          }
+
+          setAlertModal({
+            isOpen: true,
+            message: "Imagen del carrusel eliminada exitosamente",
+            type: "success",
+          })
+          loadCarouselImages()
+        } catch (error) {
+          setAlertModal({
+            isOpen: true,
+            message: error instanceof Error ? error.message : "Error al eliminar imagen del carrusel",
+            type: "error",
+          })
+        }
+      },
+    })
   }
 
-  const updateCarouselOrder = (imageId: number, direction: "up" | "down") => {
-    setCarouselImages((prevImages) => {
-      const newImages = [...prevImages]
-      const index = newImages.findIndex((img) => img.id === imageId)
-      if (direction === "up" && index > 0) {
-        ;[newImages[index], newImages[index - 1]] = [newImages[index - 1], newImages[index]]
-      } else if (direction === "down" && index < newImages.length - 1) {
-        ;[newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]]
-      }
-      return newImages
-    })
+  const updateCarouselOrder = async (imageId: number, direction: "up" | "down") => {
+    const index = carouselImages.findIndex((img) => img.id === imageId)
+    if (direction === "up" && index > 0) {
+      const newOrder = carouselImages[index - 1].order_index
+      await fetch(`/api/carousel/${imageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: newOrder }),
+      })
+      await fetch(`/api/carousel/${carouselImages[index - 1].id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: carouselImages[index].order_index }),
+      })
+      loadCarouselImages()
+    } else if (direction === "down" && index < carouselImages.length - 1) {
+      const newOrder = carouselImages[index + 1].order_index
+      await fetch(`/api/carousel/${imageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: newOrder }),
+      })
+      await fetch(`/api/carousel/${carouselImages[index + 1].id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: carouselImages[index].order_index }),
+      })
+      loadCarouselImages()
+    }
   }
 
   const addCategory = async () => {
@@ -790,31 +891,36 @@ export default function AdminPage() {
   }
 
   const deleteCategory = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar esta categoría?")) return
+    setConfirmDialog({
+      isOpen: true,
+      title: "Eliminar Categoría",
+      message: "¿Estás seguro de que deseas eliminar esta categoría? Esta acción no se puede deshacer.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/categories/${id}`, {
+            method: "DELETE",
+          })
 
-    try {
-      const response = await fetch(`/api/categories/${id}`, {
-        method: "DELETE",
-      })
+          if (!response.ok) {
+            const data = await response.json()
+            throw new Error(data.error || "Error al eliminar categoría")
+          }
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Error al eliminar categoría")
-      }
-
-      setAlertModal({
-        isOpen: true,
-        message: "Categoría eliminada exitosamente",
-        type: "success",
-      })
-      loadCategories()
-    } catch (error) {
-      setAlertModal({
-        isOpen: true,
-        message: error instanceof Error ? error.message : "Error al eliminar categoría",
-        type: "error",
-      })
-    }
+          setAlertModal({
+            isOpen: true,
+            message: "Categoría eliminada exitosamente",
+            type: "success",
+          })
+          loadCategories()
+        } catch (error) {
+          setAlertModal({
+            isOpen: true,
+            message: error instanceof Error ? error.message : "Error al eliminar categoría",
+            type: "error",
+          })
+        }
+      },
+    })
   }
 
   const startEditCategory = (category: any) => {
@@ -984,31 +1090,36 @@ export default function AdminPage() {
   }
 
   const deleteClub = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar este club?")) return
+    setConfirmDialog({
+      isOpen: true,
+      title: "Eliminar Club",
+      message: "¿Estás seguro de que deseas eliminar este club? Esta acción no se puede deshacer.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/clubs/${id}`, {
+            method: "DELETE",
+          })
 
-    try {
-      const response = await fetch(`/api/clubs/${id}`, {
-        method: "DELETE",
-      })
+          if (!response.ok) {
+            const data = await response.json()
+            throw new Error(data.error || "Error al eliminar club")
+          }
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Error al eliminar club")
-      }
-
-      setAlertModal({
-        isOpen: true,
-        message: "Club eliminado exitosamente",
-        type: "success",
-      })
-      loadClubs()
-    } catch (error) {
-      setAlertModal({
-        isOpen: true,
-        message: error instanceof Error ? error.message : "Error al eliminar club",
-        type: "error",
-      })
-    }
+          setAlertModal({
+            isOpen: true,
+            message: "Club eliminado exitosamente",
+            type: "success",
+          })
+          loadClubs()
+        } catch (error) {
+          setAlertModal({
+            isOpen: true,
+            message: error instanceof Error ? error.message : "Error al eliminar club",
+            type: "error",
+          })
+        }
+      },
+    })
   }
 
   const startEditClub = (club: any) => {
@@ -2231,6 +2342,18 @@ export default function AdminPage() {
         onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
         message={alertModal.message}
         type={alertModal.type}
+      />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
       />
     </div>
   )

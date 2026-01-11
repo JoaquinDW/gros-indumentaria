@@ -175,7 +175,7 @@ export default function ClubPage() {
                           "/placeholder.svg?height=256&width=256&query=product"
                         }
                         alt={product.name}
-                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
+                        className="w-full h-80 object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                       <div
                         className="absolute top-4 right-0 text-white px-4 py-2 transform rotate-45 origin-right translate-x-12 text-sm font-bold"
@@ -197,7 +197,10 @@ export default function ClubPage() {
                       >
                         {product.name}
                       </h3>
-                      <p className="text-sm mb-4" style={{ color: "#666666" }}>
+                      <p
+                        className="text-sm mb-4 line-clamp-2"
+                        style={{ color: "#666666" }}
+                      >
                         {product.description ||
                           "Producto personalizable de alta calidad"}
                       </p>
