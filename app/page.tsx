@@ -18,10 +18,12 @@ import { GrosBackgroundPattern } from "@/components/gros-background-pattern"
 
 export default function Home() {
   const [products, setProducts] = useState<any[]>([])
+  const [carouselSlides, setCarouselSlides] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadProducts()
+    loadCarouselImages()
   }, [])
 
   const loadProducts = async () => {
@@ -39,25 +41,58 @@ export default function Home() {
     }
   }
 
-  const carouselSlides = [
-    {
-      id: 1,
-      title: "Prendas Personalizadas",
-      description:
-        "Gráfica textil, sublimación y confección para clubes y particulares",
-      image_url: "/remera-deportiva-personalizada.jpg",
-      cta_text: "Ver Catálogo",
-      cta_link: "/clubes",
-    },
-    {
-      id: 2,
-      title: "Diseños Únicos",
-      description: "Personaliza tus prendas con los mejores acabados",
-      image_url: "/buzo-deportivo-personalizado.jpg",
-      cta_text: "Explorar",
-      cta_link: "/clubes",
-    },
-  ]
+  const loadCarouselImages = async () => {
+    try {
+      const response = await fetch("/api/carousel")
+      const data = await response.json()
+      if (data.carouselImages && data.carouselImages.length > 0) {
+        setCarouselSlides(data.carouselImages)
+      } else {
+        // Fallback to default slides if no carousel images in database
+        setCarouselSlides([
+          {
+            id: 1,
+            title: "Prendas Personalizadas",
+            description:
+              "Gráfica textil, sublimación y confección para clubes y particulares",
+            image_url: "/remera-deportiva-personalizada.jpg",
+            cta_text: "Ver Catálogo",
+            cta_link: "/clubes",
+          },
+          {
+            id: 2,
+            title: "Diseños Únicos",
+            description: "Personaliza tus prendas con los mejores acabados",
+            image_url: "/buzo-deportivo-personalizado.jpg",
+            cta_text: "Explorar",
+            cta_link: "/clubes",
+          },
+        ])
+      }
+    } catch (error) {
+      console.error("Error loading carousel images:", error)
+      // Fallback to default slides on error
+      setCarouselSlides([
+        {
+          id: 1,
+          title: "Prendas Personalizadas",
+          description:
+            "Gráfica textil, sublimación y confección para clubes y particulares",
+          image_url: "/remera-deportiva-personalizada.jpg",
+          cta_text: "Ver Catálogo",
+          cta_link: "/clubes",
+        },
+        {
+          id: 2,
+          title: "Diseños Únicos",
+          description: "Personaliza tus prendas con los mejores acabados",
+          image_url: "/buzo-deportivo-personalizado.jpg",
+          cta_text: "Explorar",
+          cta_link: "/clubes",
+        },
+      ])
+    }
+  }
 
   return (
     <div
