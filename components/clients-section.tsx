@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { motion } from "framer-motion"
 import { ScrollReveal } from "@/components/scroll-reveal"
 import { staggerContainer, fadeInUp } from "@/lib/animations"
@@ -105,58 +106,63 @@ export function ClientsSection() {
           className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-8 items-center"
         >
           {clubs.map((club, index) => (
-            <motion.div
+            <Link
               key={club.id}
-              variants={fadeInUp}
-              whileHover={{
-                y: -10,
-                scale: 1.05,
-                transition: { type: "spring", stiffness: 300, damping: 15 }
-              }}
-              className="flex items-center justify-center p-6 rounded-lg group relative"
-              style={{ backgroundColor: "var(--gros-sand)" }}
+              href={`/clubes/${club.slug}`}
+              aria-label={`Ver productos de ${club.name}`}
             >
-              {/* Floating animation */}
               <motion.div
-                animate={{
-                  y: [0, -8, 0],
+                variants={fadeInUp}
+                whileHover={{
+                  y: -10,
+                  scale: 1.05,
+                  transition: { type: "spring", stiffness: 300, damping: 15 }
                 }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  delay: index * 0.2,
-                  ease: "easeInOut",
-                }}
-                className="w-full"
+                className="flex items-center justify-center p-6 rounded-lg group relative cursor-pointer"
+                style={{ backgroundColor: "var(--gros-sand)" }}
               >
-                {club.logo_url ? (
-                  <div className="relative w-full h-24 grayscale group-hover:grayscale-0 transition-all duration-300">
-                    <img
-                      src={club.logo_url}
-                      alt={club.name}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <p
-                      className="font-bold text-sm md:text-base"
-                      style={{ color: "var(--gros-black)" }}
-                    >
-                      {club.name}
-                    </p>
-                  </div>
-                )}
-              </motion.div>
+                {/* Floating animation */}
+                <motion.div
+                  animate={{
+                    y: [0, -8, 0],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    delay: index * 0.2,
+                    ease: "easeInOut",
+                  }}
+                  className="w-full"
+                >
+                  {club.logo_url ? (
+                    <div className="relative w-full h-24 grayscale group-hover:grayscale-0 transition-all duration-300">
+                      <img
+                        src={club.logo_url}
+                        alt={club.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <p
+                        className="font-bold text-sm md:text-base"
+                        style={{ color: "var(--gros-black)" }}
+                      >
+                        {club.name}
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
 
-              {/* Glow effect on hover */}
-              <motion.div
-                className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{
-                  boxShadow: "0 0 20px rgba(196, 58, 47, 0.3)",
-                }}
-              />
-            </motion.div>
+                {/* Glow effect on hover */}
+                <motion.div
+                  className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    boxShadow: "0 0 20px rgba(196, 58, 47, 0.3)",
+                  }}
+                />
+              </motion.div>
+            </Link>
           ))}
         </motion.div>
       </div>

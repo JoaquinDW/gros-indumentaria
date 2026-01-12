@@ -138,19 +138,21 @@ export default function ContactPage() {
               {
                 icon: Phone,
                 title: "Teléfono",
-                content: "+54 9 11 1234 5678",
-                link: "https://wa.me/5491234567890",
+                content: "+54 3734 443259",
+                link: "https://wa.me/5493734443259",
                 linkText: "Escribir por WhatsApp →",
               },
               {
                 icon: Mail,
                 title: "Email",
-                content: "info@grosindum.com",
+                content: "graficagros@gmail.com",
               },
               {
                 icon: MapPin,
                 title: "Ubicación",
                 content: "Presidencia de la Plaza, Chaco, Argentina",
+                link: "https://www.google.com/maps/place/GROS/@-27.0057242,-59.8464425,17z/data=!3m1!4b1!4m6!3m5!1s0x9446a1480b760723:0xbaa24be63221c8f1!8m2!3d-27.0057242!4d-59.8464425!16s%2Fg%2F11p56k_qvd?entry=ttu&g_ep=EgoyMDI2MDEwNy4wIKXMDSoASAFQAw%3D%3D",
+                linkText: "Ver en Google Maps →",
               },
             ].map((item, idx) => {
               const Icon = item.icon
@@ -458,7 +460,7 @@ export default function ContactPage() {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <a href="https://wa.me/5491234567890">
+              <a href="https://wa.me/5493734443259">
                 <MagneticButton
                   size="lg"
                   glow={true}

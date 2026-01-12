@@ -19,7 +19,7 @@ export async function PATCH(
     const body = await request.json()
 
     // Extract allowed fields
-    const { name, slug, description, logo_url, order_index, active } = body
+    const { name, slug, description, logo_url, order_index, active, background_type, background_value, background_image_url } = body
 
     const updateData: any = {}
 
@@ -40,6 +40,9 @@ export async function PATCH(
     if (logo_url !== undefined) updateData.logo_url = logo_url
     if (order_index !== undefined) updateData.order_index = order_index
     if (active !== undefined) updateData.active = active
+    if (background_type !== undefined) updateData.background_type = background_type
+    if (background_value !== undefined) updateData.background_value = background_value
+    if (background_image_url !== undefined) updateData.background_image_url = background_image_url
 
     const { data: club, error } = await supabase
       .from("clubs")

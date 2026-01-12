@@ -242,6 +242,9 @@ export default function AdminPage() {
     description: "",
     logo_url: "",
     order_index: 0,
+    background_type: "color",
+    background_value: "#1a1a1a",
+    background_image_url: "",
   })
   const [editingClub, setEditingClub] = useState<number | null>(null)
   const [isClubModalOpen, setIsClubModalOpen] = useState(false)
@@ -1138,13 +1141,25 @@ export default function AdminPage() {
       description: club.description || "",
       logo_url: club.logo_url || "",
       order_index: club.order_index || 0,
+      background_type: club.background_type || "color",
+      background_value: club.background_value || "#1a1a1a",
+      background_image_url: club.background_image_url || "",
     })
     setIsClubModalOpen(true)
   }
 
   const cancelEditClub = () => {
     setEditingClub(null)
-    setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
+    setNewClub({
+      name: "",
+      slug: "",
+      description: "",
+      logo_url: "",
+      order_index: 0,
+      background_type: "color",
+      background_value: "#1a1a1a",
+      background_image_url: "",
+    })
     setIsClubModalOpen(false)
   }
 
@@ -2262,6 +2277,111 @@ export default function AdminPage() {
               />
             </div>
           </div>
+
+          {/* Background Customization */}
+          <div className="border-t pt-4 mt-4">
+            <h3 className="text-sm font-bold mb-4" style={{ color: "var(--gros-black)" }}>
+              Personalización de Fondo
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                  Tipo de Fondo
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => setNewClub({ ...newClub, background_type: "color" })}
+                    variant={newClub.background_type === "color" ? "default" : "outline"}
+                    className={newClub.background_type === "color" ? "font-bold" : ""}
+                    style={newClub.background_type === "color" ? { backgroundColor: "var(--gros-red)", color: "var(--gros-white)" } : {}}
+                  >
+                    Color
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setNewClub({ ...newClub, background_type: "image" })}
+                    variant={newClub.background_type === "image" ? "default" : "outline"}
+                    className={newClub.background_type === "image" ? "font-bold" : ""}
+                    style={newClub.background_type === "image" ? { backgroundColor: "var(--gros-red)", color: "var(--gros-white)" } : {}}
+                  >
+                    Imagen
+                  </Button>
+                </div>
+              </div>
+
+              {newClub.background_type === "color" && (
+                <div>
+                  <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                    Color de Fondo
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {[
+                      { name: "Negro Gros", value: "#1a1a1a" },
+                      { name: "Rojo Gros", value: "#C43A2F" },
+                      { name: "Azul Gros", value: "#2E5C8A" },
+                      { name: "Marrón Gros", value: "#6B3E3E" },
+                      { name: "Arena Gros", value: "#F5F1E8" },
+                    ].map((color) => (
+                      <button
+                        key={color.value}
+                        type="button"
+                        onClick={() => setNewClub({ ...newClub, background_value: color.value })}
+                        className={`p-3 rounded border-2 text-left transition ${
+                          newClub.background_value === color.value
+                            ? "border-[var(--gros-red)] ring-2 ring-[var(--gros-red)]/20"
+                            : "border-gray-300 hover:border-gray-400"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded border border-gray-300"
+                            style={{ backgroundColor: color.value }}
+                          />
+                          <span className="text-xs font-bold">{color.name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1 text-gray-600">
+                      O ingresa un color personalizado (hex):
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={newClub.background_value}
+                        onChange={(e) => setNewClub({ ...newClub, background_value: e.target.value })}
+                        placeholder="#1a1a1a"
+                        className="flex-1"
+                      />
+                      <input
+                        type="color"
+                        value={newClub.background_value}
+                        onChange={(e) => setNewClub({ ...newClub, background_value: e.target.value })}
+                        className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {newClub.background_type === "image" && (
+                <div>
+                  <ImageUpload
+                    label="Imagen de Fondo"
+                    value={newClub.background_image_url}
+                    onChange={(url) => setNewClub({ ...newClub, background_image_url: url })}
+                    onRemove={() => setNewClub({ ...newClub, background_image_url: "" })}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    La imagen se mostrará con una superposición oscura para mantener la legibilidad del texto.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex gap-2 pt-4">
             <Button
               onClick={editingClub ? () => updateClub(editingClub) : addClub}

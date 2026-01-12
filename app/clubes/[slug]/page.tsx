@@ -15,6 +15,9 @@ interface Club {
   description: string
   logo_url: string
   active: boolean
+  background_type?: string
+  background_value?: string
+  background_image_url?: string
 }
 
 interface Product {
@@ -123,10 +126,25 @@ export default function ClubPage() {
 
       {/* Hero Section */}
       <section
-        className="py-16 px-4 md:px-8"
-        style={{ backgroundColor: "var(--gros-black)" }}
+        className="py-16 px-4 md:px-8 relative overflow-hidden"
+        style={{
+          backgroundColor: club.background_type === "color" ? (club.background_value || "var(--gros-black)") : "var(--gros-black)",
+        }}
       >
-        <div className="max-w-7xl mx-auto text-center">
+        {/* Background Image with Overlay */}
+        {club.background_type === "image" && club.background_image_url && (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${club.background_image_url})`,
+              }}
+            />
+            <div className="absolute inset-0 bg-black/60" />
+          </>
+        )}
+
+        <div className="max-w-7xl mx-auto text-center relative z-10">
           {club.logo_url && (
             <div className="mb-6 flex justify-center">
               <img

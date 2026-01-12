@@ -257,6 +257,28 @@ export default function Home() {
               ))}
             </motion.div>
           )}
+
+          {/* Ver más productos button */}
+          {!loading && products.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="text-center mt-12"
+            >
+              <Link href="/clubes">
+                <MagneticButton
+                  size="lg"
+                  glow={true}
+                  magneticStrength={0.4}
+                  className="bg-[var(--gros-red)] text-white hover:bg-[var(--gros-maroon)] font-bold text-lg px-8 py-6 shadow-lg"
+                >
+                  Ver Más Productos
+                </MagneticButton>
+              </Link>
+            </motion.div>
+          )}
         </div>
       </section>
 
