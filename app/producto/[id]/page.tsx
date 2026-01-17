@@ -23,7 +23,8 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
   const [selectedSize, setSelectedSize] = useState("")
   const [selectedFabric, setSelectedFabric] = useState("")
   const [quantity, setQuantity] = useState(1)
-  const [customText, setCustomText] = useState("")
+  const [personalizationName, setPersonalizationName] = useState("")
+  const [personalizationNumber, setPersonalizationNumber] = useState("")
   const [currentPrice, setCurrentPrice] = useState(0)
   const { addItem } = useCart()
   const [alertModal, setAlertModal] = useState<{
@@ -115,6 +116,22 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       })
       return
     }
+    if (product.name_field_enabled && !personalizationName.trim()) {
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor ingresa el nombre para personalización",
+        type: "error",
+      })
+      return
+    }
+    if (product.number_field_enabled && !personalizationNumber.trim()) {
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor ingresa el número para personalización",
+        type: "error",
+      })
+      return
+    }
     addItem({
       productId: product.id,
       name: product.name,
@@ -123,7 +140,8 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       size: selectedSize,
       color: "Sin color",
       fabric: selectedFabric || "Sin especificar",
-      customText,
+      personalizationName: product.name_field_enabled ? personalizationName : undefined,
+      personalizationNumber: product.number_field_enabled ? personalizationNumber : undefined,
       image: product.images[0],
     })
 
@@ -268,12 +286,20 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                 {product.description}
               </p>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold" style={{ color: "var(--gros-red)" }}>
-                  ${currentPrice}
-                </span>
-                <span className="text-sm" style={{ color: "#999999" }}>
-                  por unidad
-                </span>
+                {product.price_on_request ? (
+                  <span className="text-3xl font-bold" style={{ color: "var(--gros-red)" }}>
+                    Solicitar cotización
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold" style={{ color: "var(--gros-red)" }}>
+                      ${currentPrice}
+                    </span>
+                    <span className="text-sm" style={{ color: "#999999" }}>
+                      por unidad
+                    </span>
+                  </>
+                )}
               </div>
               <p className="text-sm mt-2" style={{ color: "#999999" }}>
                 Producción: {product.leadTime}
@@ -324,7 +350,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                       >
                         <div className="flex justify-between items-center">
                           <span>{fabricName}</span>
-                          <span className="text-sm font-bold">${price}</span>
+                          {!product.price_on_request && <span className="text-sm font-bold">${price}</span>}
                         </div>
                       </button>
                     ))}
@@ -362,35 +388,58 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                 </div>
               </div>
 
-              {/* Customization */}
-              <div>
-                <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
-                  Texto personalizado (opcional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Mi Club 2025"
-                  value={customText}
-                  onChange={(e) => setCustomText(e.target.value)}
-                  maxLength={30}
-                  className="w-full px-3 py-2 border rounded"
-                  style={{ borderColor: "#d0d0d0" }}
-                />
-                <p className="text-xs mt-1" style={{ color: "#999999" }}>
-                  {customText.length}/30 caracteres
-                </p>
-              </div>
+              {/* Personalization Name Field */}
+              {product.name_field_enabled && (
+                <div>
+                  <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
+                    Nombre *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Tal como va escrito en la prenda"
+                    value={personalizationName}
+                    onChange={(e) => setPersonalizationName(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                    style={{ borderColor: "#d0d0d0" }}
+                  />
+                  <p className="text-xs mt-1" style={{ color: "#999999" }}>
+                    Escribe el nombre tal como deseas que aparezca en la prenda
+                  </p>
+                </div>
+              )}
+
+              {/* Personalization Number Field */}
+              {product.number_field_enabled && (
+                <div>
+                  <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
+                    Número *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 10"
+                    value={personalizationNumber}
+                    onChange={(e) => setPersonalizationNumber(e.target.value)}
+                    className="w-full px-3 py-2 border rounded"
+                    style={{ borderColor: "#d0d0d0" }}
+                  />
+                  <p className="text-xs mt-1" style={{ color: "#999999" }}>
+                    Escribe el número que deseas en la prenda
+                  </p>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="space-y-3 pt-4">
-                <Button
-                  onClick={handleAddToCart}
-                  className="w-full font-bold h-12 hover:opacity-90"
-                  style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
-                >
-                  <ShoppingCart className="mr-2 h-5 w-5" />
-                  Agregar al Carrito
-                </Button>
+                {!product.price_on_request && (
+                  <Button
+                    onClick={handleAddToCart}
+                    className="w-full font-bold h-12 hover:opacity-90"
+                    style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                  >
+                    <ShoppingCart className="mr-2 h-5 w-5" />
+                    Agregar al Carrito
+                  </Button>
+                )}
                 <a href="https://wa.me/5491234567890?text=Me%20interesa%20este%20producto" className="block">
                   <Button
                     className="w-full font-bold h-12"
@@ -401,7 +450,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
                     }}
                   >
                     <MessageCircle className="mr-2 h-5 w-5" />
-                    Consultar por WhatsApp
+                    {product.price_on_request ? "Solicitar cotización por WhatsApp" : "Consultar por WhatsApp"}
                   </Button>
                 </a>
               </div>

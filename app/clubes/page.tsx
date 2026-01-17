@@ -76,10 +76,10 @@ export default function ClubPage() {
             ← Volver al inicio
           </Link>
           <h1 className="text-4xl md:text-5xl font-bold font-serif">
-            Catálogo de Clubes
+            Catálogo
           </h1>
           <p className="text-lg mt-2" style={{ color: "#f0f0f0" }}>
-            Prendas personalizables para tu club
+            Prendas personalizables
           </p>
         </div>
       </header>
@@ -161,7 +161,11 @@ export default function ClubPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) => {
                 // Get first image position if available
-                const firstPosition = product.image_positions?.[0] || { x: 50, y: 50, scale: 1 }
+                const firstPosition = product.image_positions?.[0] || {
+                  x: 50,
+                  y: 50,
+                  scale: 1,
+                }
 
                 return (
                   <Link key={product.id} href={`/producto/${product.id}`}>
@@ -192,47 +196,47 @@ export default function ClubPage() {
                           PERSONALIZADO
                         </div>
                       </div>
-                    <div className="p-4">
-                      <p
-                        className="text-xs font-bold uppercase mb-2"
-                        style={{ color: "var(--gros-blue)" }}
-                      >
-                        {product.category}
-                      </p>
-                      <h3
-                        className="text-lg font-bold mb-2"
-                        style={{ color: "var(--gros-black)" }}
-                      >
-                        {product.name}
-                      </h3>
-                      <p
-                        className="text-sm mb-4 line-clamp-2"
-                        style={{ color: "#666666" }}
-                      >
-                        {product.description ||
-                          "Producto personalizable de alta calidad"}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span
-                          className="text-2xl font-bold"
-                          style={{ color: "var(--gros-red)" }}
+                      <div className="p-4">
+                        <p
+                          className="text-xs font-bold uppercase mb-2"
+                          style={{ color: "var(--gros-blue)" }}
                         >
-                          ${product.price}
-                        </span>
-                        <Button
-                          size="sm"
-                          style={{
-                            backgroundColor: "var(--gros-red)",
-                            color: "var(--gros-white)",
-                          }}
-                          className="hover:opacity-90"
+                          {product.category}
+                        </p>
+                        <h3
+                          className="text-lg font-bold mb-2"
+                          style={{ color: "var(--gros-black)" }}
                         >
-                          Ver Detalle
-                        </Button>
+                          {product.name}
+                        </h3>
+                        <p
+                          className="text-sm mb-4 line-clamp-2"
+                          style={{ color: "#666666" }}
+                        >
+                          {product.description ||
+                            "Producto personalizable de alta calidad"}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span
+                            className="text-xl font-bold"
+                            style={{ color: "var(--gros-red)" }}
+                          >
+                            {product.price_on_request ? "Solicitar cotización" : `$${product.price}`}
+                          </span>
+                          <Button
+                            size="sm"
+                            style={{
+                              backgroundColor: "var(--gros-red)",
+                              color: "var(--gros-white)",
+                            }}
+                            className="hover:opacity-90"
+                          >
+                            Ver Detalle
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                </Link>
+                    </Card>
+                  </Link>
                 )
               })}
             </div>

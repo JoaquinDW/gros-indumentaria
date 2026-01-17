@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
             customer_phone: metadata?.customer_phone || payer?.phone?.number || "",
             customer_address: metadata?.customer_address || "",
             customer_province: metadata?.customer_province || "",
+            customer_locality: metadata?.customer_locality || "",
             items: items,
             total_amount: transaction_amount,
             mercado_pago_payment_id: paymentId,

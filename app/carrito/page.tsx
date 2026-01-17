@@ -86,8 +86,11 @@ export default function CartPage() {
                       Talle: {item.size} • Color: {item.color}
                       {item.fabric && item.fabric !== "Sin especificar" && ` • Tela: ${item.fabric}`}
                     </p>
-                    {item.customText && (
-                      <p className="text-sm text-gros-red mb-2">Personalización: {item.customText}</p>
+                    {item.personalizationName && (
+                      <p className="text-sm text-gros-red mb-2">Nombre: {item.personalizationName}</p>
+                    )}
+                    {item.personalizationNumber && (
+                      <p className="text-sm text-gros-red mb-2">Número: {item.personalizationNumber}</p>
                     )}
                     <p className="text-lg font-bold text-gros-red">${item.price}</p>
                   </div>

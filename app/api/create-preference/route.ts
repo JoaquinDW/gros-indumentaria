@@ -25,16 +25,23 @@ export async function POST(request: NextRequest) {
     const preference = new Preference(client)
 
     // Build items array for Mercado Pago
-    const mpItems = items.map((item: any) => ({
-      id: item.productId.toString(),
-      title: `${item.name} (${item.size}, ${item.color})`,
-      description: item.customText || "Sin personalización",
-      picture_url: item.image,
-      category_id: "clothing",
-      quantity: item.quantity,
-      currency_id: "ARS",
-      unit_price: Number(item.price),
-    }))
+    const mpItems = items.map((item: any) => {
+      const personalizationParts = []
+      if (item.personalizationName) personalizationParts.push(`Nombre: ${item.personalizationName}`)
+      if (item.personalizationNumber) personalizationParts.push(`Número: ${item.personalizationNumber}`)
+      const description = personalizationParts.length > 0 ? personalizationParts.join(", ") : "Sin personalización"
+
+      return {
+        id: item.productId.toString(),
+        title: `${item.name} (${item.size}, ${item.color})`,
+        description,
+        picture_url: item.image,
+        category_id: "clothing",
+        quantity: item.quantity,
+        currency_id: "ARS",
+        unit_price: Number(item.price),
+      }
+    })
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
     const externalReference = `ORDER-${Date.now()}`
@@ -84,7 +91,8 @@ export async function POST(request: NextRequest) {
       customer_email: customerData.email,
       customer_phone: customerData.phone,
       customer_address: customerData.address,
-      customer_province: customerData.province,
+      customer_province: customerData.provinceName || customerData.province,
+      customer_locality: customerData.locality,
       customer_notes: customerData.notes,
       delivery_method: customerData.deliveryMethod,
       club_id: customerData.clubId,

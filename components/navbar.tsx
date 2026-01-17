@@ -12,6 +12,7 @@ interface Club {
   name: string
   slug: string
   active: boolean
+  client_type: "club" | "organization"
 }
 
 export function Navbar() {
@@ -34,7 +35,10 @@ export function Navbar() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsClubsDropdownOpen(false)
       }
     }
@@ -47,10 +51,13 @@ export function Navbar() {
 
   const loadClubs = async () => {
     try {
-      const response = await fetch("/api/clubs")
+      const response = await fetch("/api/clubs?type=club")
       const data = await response.json()
       if (data.clubs) {
-        setClubs(data.clubs.filter((c: Club) => c.active))
+        // Only show active clubs (not organizations) in navbar
+        setClubs(
+          data.clubs.filter((c: Club) => c.active && c.client_type === "club"),
+        )
       }
     } catch (error) {
       console.error("Error loading clubs:", error)
@@ -60,18 +67,21 @@ export function Navbar() {
   return (
     <nav
       className="sticky top-0 z-50"
-      style={{ backgroundColor: "var(--gros-white)", borderBottom: "1px solid var(--border)" }}
+      style={{
+        backgroundColor: "var(--gros-white)",
+        borderBottom: "1px solid var(--border)",
+      }}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/gros-logo.jpg"
+              src="/gros-logo.png"
               alt="GROS Indumentaria"
               width={56}
               height={56}
-              className="h-14 w-14 object-cover rounded-full"
+              className="h-15 w-15 object-contain"
               priority
             />
           </Link>
@@ -97,7 +107,9 @@ export function Navbar() {
                 style={{ color: "var(--gros-black)" }}
               >
                 Clubes
-                <ChevronDown className={`h-4 w-4 transition-transform ${isClubsDropdownOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${isClubsDropdownOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
               {isClubsDropdownOpen && clubs.length > 0 && (
@@ -113,7 +125,10 @@ export function Navbar() {
                   >
                     Ver todos los clubes
                   </Link>
-                  <div className="border-t my-2" style={{ borderColor: "var(--border)" }}></div>
+                  <div
+                    className="border-t my-2"
+                    style={{ borderColor: "var(--border)" }}
+                  ></div>
                   {clubs.map((club) => (
                     <Link
                       key={club.id}
@@ -137,7 +152,10 @@ export function Navbar() {
                 variant="outline"
                 size="icon"
                 className="relative bg-transparent"
-                style={{ borderColor: "var(--gros-red)", color: "var(--gros-red)" }}
+                style={{
+                  borderColor: "var(--gros-red)",
+                  color: "var(--gros-red)",
+                }}
               >
                 <ShoppingCart className="h-5 w-5" />
                 {cartCount > 0 && (
@@ -152,8 +170,16 @@ export function Navbar() {
             </Link>
 
             {/* Mobile menu button */}
-            <button className="md:hidden" onClick={() => setIsOpen(!isOpen)} style={{ color: "var(--gros-black)" }}>
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            <button
+              className="md:hidden"
+              onClick={() => setIsOpen(!isOpen)}
+              style={{ color: "var(--gros-black)" }}
+            >
+              {isOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </button>
           </div>
         </div>
@@ -172,15 +198,24 @@ export function Navbar() {
                 href={link.href}
                 onClick={() => setIsOpen(false)}
                 className="text-2xl font-bold transition hover:opacity-70 border-b pb-4"
-                style={{ color: "var(--gros-black)", borderColor: "var(--border)" }}
+                style={{
+                  color: "var(--gros-black)",
+                  borderColor: "var(--border)",
+                }}
               >
                 {link.label}
               </Link>
             ))}
 
             {/* Mobile Clubs Section */}
-            <div className="border-b pb-4" style={{ borderColor: "var(--border)" }}>
-              <div className="text-2xl font-bold mb-4" style={{ color: "var(--gros-black)" }}>
+            <div
+              className="border-b pb-4"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <div
+                className="text-2xl font-bold mb-4"
+                style={{ color: "var(--gros-black)" }}
+              >
                 Clubes
               </div>
               <div className="pl-4 space-y-3">

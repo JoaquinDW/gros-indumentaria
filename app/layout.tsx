@@ -1,16 +1,17 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Gantari, Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { FloatingWhatsApp } from "@/components/floating-whatsapp"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const _geist = Gantari({ subsets: ["latin"] })
+// const _geistMono = Gantari({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Gros Indumentaria | Prendas Personalizables",
-  description: "Gráfica textil, sublimación y confección de prendas personalizadas para clubes y particulares",
+  description:
+    "Gráfica textil, sublimación y confección de prendas personalizadas para clubes y particulares",
   generator: "v0.app",
   icons: {
     icon: [

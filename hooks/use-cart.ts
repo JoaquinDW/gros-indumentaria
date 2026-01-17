@@ -11,6 +11,8 @@ export interface CartItem {
   color: string
   fabric: string
   customText?: string
+  personalizationName?: string
+  personalizationNumber?: string
   image: string
 }
 
@@ -41,7 +43,12 @@ export function useCart() {
   const addItem = useCallback((item: CartItem) => {
     setItems((prev) => {
       const existingItem = prev.find(
-        (i) => i.productId === item.productId && i.size === item.size && i.color === item.color && i.fabric === item.fabric,
+        (i) => i.productId === item.productId &&
+               i.size === item.size &&
+               i.color === item.color &&
+               i.fabric === item.fabric &&
+               i.personalizationName === item.personalizationName &&
+               i.personalizationNumber === item.personalizationNumber,
       )
 
       if (existingItem) {

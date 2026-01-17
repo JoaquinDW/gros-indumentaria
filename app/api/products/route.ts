@@ -60,12 +60,15 @@ export async function POST(request: NextRequest) {
       category,
       description,
       price,
+      price_on_request,
       image_url,
       images,
       sizes,
       fabrics,
       lead_time,
       active,
+      name_field_enabled,
+      number_field_enabled,
     } = body
 
     // Validate required fields
@@ -81,7 +84,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    if (price === undefined || price === null) {
+    // Validate price: required only if price_on_request is false
+    if (!price_on_request && (price === undefined || price === null)) {
       return NextResponse.json(
         { error: "El precio es requerido" },
         { status: 400 }
@@ -105,13 +109,16 @@ export async function POST(request: NextRequest) {
         name,
         category,
         description: description || null,
-        price,
+        price: price_on_request ? null : price,
+        price_on_request: price_on_request || false,
         image_url: productImages[0] || null, // Keep first image in image_url for backward compatibility
         images: productImages,
         sizes: sizes || [],
         fabrics: fabrics || {},
         lead_time: lead_time || "7-10 días",
         active: active !== undefined ? active : true,
+        name_field_enabled: name_field_enabled || false,
+        number_field_enabled: number_field_enabled || false,
       })
       .select()
       .single()

@@ -1,10 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-// GET - List all clubs
+// GET - List all clubs or filter by type
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
+
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type') // 'club' or 'organization'
 
     // Check if user is authenticated to show all clubs, or just active ones
     const { data: { session } } = await supabase.auth.getSession()
@@ -17,6 +21,11 @@ export async function GET(request: NextRequest) {
     // If not authenticated, only show active clubs
     if (!session) {
       query = query.eq("active", true)
+    }
+
+    // Filter by client_type if specified
+    if (type === 'club' || type === 'organization') {
+      query = query.eq("client_type", type)
     }
 
     const { data: clubs, error } = await query
@@ -49,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, slug, description, logo_url, order_index, active, background_type, background_value, background_image_url } = body
+    const { name, slug, description, logo_url, order_index, active, client_type, background_type, background_value, background_image_url } = body
 
     if (!name) {
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
@@ -72,6 +81,7 @@ export async function POST(request: NextRequest) {
         logo_url: logo_url || null,
         order_index: order_index || 0,
         active: active !== undefined ? active : true,
+        client_type: client_type || 'club',
         background_type: background_type || 'color',
         background_value: background_value || '#1a1a1a',
         background_image_url: background_image_url || null,

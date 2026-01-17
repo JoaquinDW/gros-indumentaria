@@ -1,17 +1,23 @@
-"use client";
+"use client"
 
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ReactNode, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion"
+import { ReactNode, useRef } from "react"
+import { Button } from "@/components/ui/button"
 
 interface MagneticButtonProps {
-  children: ReactNode;
-  className?: string;
-  onClick?: () => void;
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-  size?: "default" | "sm" | "lg" | "icon";
-  magneticStrength?: number;
-  glow?: boolean;
+  children: ReactNode
+  className?: string
+  onClick?: () => void
+  variant?:
+    | "default"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | "link"
+  size?: "default" | "sm" | "lg" | "icon"
+  magneticStrength?: number
+  glow?: boolean
 }
 
 export function MagneticButton({
@@ -23,37 +29,37 @@ export function MagneticButton({
   magneticStrength = 0.3,
   glow = false,
 }: MagneticButtonProps) {
-  const ref = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLButtonElement>(null)
 
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
 
-  const springConfig = { damping: 15, stiffness: 150 };
-  const springX = useSpring(x, springConfig);
-  const springY = useSpring(y, springConfig);
+  const springConfig = { damping: 15, stiffness: 150 }
+  const springX = useSpring(x, springConfig)
+  const springY = useSpring(y, springConfig)
 
   const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!ref.current) return;
+    if (!ref.current) return
 
-    const rect = ref.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+    const rect = ref.current.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
 
-    const distanceX = (e.clientX - centerX) * magneticStrength;
-    const distanceY = (e.clientY - centerY) * magneticStrength;
+    const distanceX = (e.clientX - centerX) * magneticStrength
+    const distanceY = (e.clientY - centerY) * magneticStrength
 
-    x.set(distanceX);
-    y.set(distanceY);
-  };
+    x.set(distanceX)
+    y.set(distanceY)
+  }
 
   const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
+    x.set(0)
+    y.set(0)
+  }
 
   const glowClass = glow
-    ? "relative before:absolute before:inset-0 before:rounded-md before:bg-gradient-to-r before:from-[var(--gros-red)] before:to-[var(--gros-maroon)] before:blur-xl before:opacity-0 hover:before:opacity-50 before:transition-opacity before:duration-500 before:-z-10"
-    : "";
+    ? "relative before:absolute before:inset-0 before:bg-gradient-to-r before:from-[var(--gros-red)] before:to-[var(--gros-maroon)] before:blur-xl before:opacity-0 hover:before:opacity-50 before:transition-opacity before:duration-500 before:-z-10"
+    : ""
 
   return (
     <motion.div
@@ -87,7 +93,7 @@ export function MagneticButton({
         </motion.button>
       </Button>
     </motion.div>
-  );
+  )
 }
 
 // Simpler button with just hover effects
@@ -98,26 +104,30 @@ export function AnimatedButton({
   variant = "default",
   glow = false,
 }: {
-  children: ReactNode;
-  className?: string;
-  onClick?: () => void;
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-  glow?: boolean;
+  children: ReactNode
+  className?: string
+  onClick?: () => void
+  variant?:
+    | "default"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | "link"
+  glow?: boolean
 }) {
   const glowClass = glow
-    ? "relative before:absolute before:inset-0 before:rounded-md before:bg-gradient-to-r before:from-[var(--gros-red)] before:to-[var(--gros-maroon)] before:blur-xl before:opacity-0 hover:before:opacity-50 before:transition-opacity before:duration-500 before:-z-10"
-    : "";
+    ? "relative before:absolute before:inset-0  before:bg-gradient-to-r before:from-[var(--gros-red)] before:to-[var(--gros-maroon)] before:blur-xl before:opacity-0 hover:before:opacity-50 before:transition-opacity before:duration-500 before:-z-10"
+    : ""
 
   return (
     <motion.div className={glowClass}>
-      <Button
-        variant={variant}
-        className={className}
-        onClick={onClick}
-        asChild
-      >
+      <Button variant={variant} className={className} onClick={onClick} asChild>
         <motion.button
-          whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(196, 58, 47, 0.3)" }}
+          whileHover={{
+            scale: 1.05,
+            boxShadow: "0 10px 30px rgba(196, 58, 47, 0.3)",
+          }}
           whileTap={{ scale: 0.95 }}
           transition={{ type: "spring", stiffness: 400, damping: 10 }}
         >
@@ -125,5 +135,5 @@ export function AnimatedButton({
         </motion.button>
       </Button>
     </motion.div>
-  );
+  )
 }

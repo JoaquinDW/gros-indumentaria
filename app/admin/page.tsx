@@ -81,7 +81,7 @@ function SortableProductCard({
         <div>
           <p className="text-xs text-gray-500 font-bold">PRECIO</p>
           <p className="font-bold text-lg" style={{ color: "var(--gros-red)" }}>
-            ${product.price}
+            {product.price_on_request ? "Consultar" : `$${product.price}`}
           </p>
         </div>
         <div>
@@ -140,7 +140,7 @@ export default function AdminPage() {
   )
 
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [activeTab, setActiveTab] = useState<"orders" | "products" | "categories" | "clubs" | "carousel">("orders")
+  const [activeTab, setActiveTab] = useState<"orders" | "products" | "categories" | "clubs" | "organizations" | "carousel">("orders")
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -197,6 +197,7 @@ export default function AdminPage() {
     category: "",
     description: "",
     price: 0,
+    price_on_request: false,
     image_url: "",
     images: [] as string[],
     image_positions: [] as Array<{ x: number; y: number; scale: number }>,
@@ -205,6 +206,8 @@ export default function AdminPage() {
     lead_time: "7-10 días",
     active: true,
     club_ids: [] as number[],
+    name_field_enabled: false,
+    number_field_enabled: false,
   })
   const [editingProduct, setEditingProduct] = useState<number | null>(null)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
@@ -242,6 +245,7 @@ export default function AdminPage() {
     description: "",
     logo_url: "",
     order_index: 0,
+    client_type: "club" as "club" | "organization",
     background_type: "color",
     background_value: "#1a1a1a",
     background_image_url: "",
@@ -251,6 +255,21 @@ export default function AdminPage() {
   const [selectedClubForProducts, setSelectedClubForProducts] = useState<number | null>(null)
   const [clubProducts, setClubProducts] = useState<number[]>([])
 
+  const [organizations, setOrganizations] = useState<any[]>([])
+  const [newOrganization, setNewOrganization] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    logo_url: "",
+    order_index: 0,
+    client_type: "organization" as "club" | "organization",
+    background_type: "color",
+    background_value: "#1a1a1a",
+    background_image_url: "",
+  })
+  const [editingOrganization, setEditingOrganization] = useState<number | null>(null)
+  const [isOrganizationModalOpen, setIsOrganizationModalOpen] = useState(false)
+
   useEffect(() => {
     setMounted(true)
     setSupabase(createClient())
@@ -259,8 +278,8 @@ export default function AdminPage() {
   // Sincronizar tab con URL query parameter
   useEffect(() => {
     const tab = searchParams.get('tab')
-    if (tab && ['orders', 'products', 'categories', 'clubs', 'carousel'].includes(tab)) {
-      setActiveTab(tab as "orders" | "products" | "categories" | "clubs" | "carousel")
+    if (tab && ['orders', 'products', 'categories', 'clubs', 'organizations', 'carousel'].includes(tab)) {
+      setActiveTab(tab as "orders" | "products" | "categories" | "clubs" | "organizations" | "carousel")
     }
   }, [searchParams])
 
@@ -282,6 +301,7 @@ export default function AdminPage() {
       loadCategories()
       loadProducts()
       loadClubs()
+      loadOrganizations()
       loadCarouselImages()
     }
   }, [isLoggedIn])
@@ -348,7 +368,7 @@ export default function AdminPage() {
     setIsLoggedIn(false)
   }
 
-  const changeTab = (tab: "orders" | "products" | "categories" | "clubs" | "carousel") => {
+  const changeTab = (tab: "orders" | "products" | "categories" | "clubs" | "organizations" | "carousel") => {
     setActiveTab(tab)
     router.push(`/admin?tab=${tab}`)
   }
@@ -358,7 +378,8 @@ export default function AdminPage() {
   }
 
   const addProduct = async () => {
-    if (!newProduct.name || !newProduct.category || newProduct.price <= 0) {
+    // Validate required fields - price is only required if not "price on request"
+    if (!newProduct.name || !newProduct.category || (!newProduct.price_on_request && newProduct.price <= 0)) {
       setAlertModal({
         isOpen: true,
         message: "Por favor completa todos los campos requeridos",
@@ -408,6 +429,7 @@ export default function AdminPage() {
         category: "",
         description: "",
         price: 0,
+        price_on_request: false,
         image_url: "",
         images: [],
         image_positions: [],
@@ -416,6 +438,8 @@ export default function AdminPage() {
         lead_time: "7-10 días",
         active: true,
         club_ids: [],
+        name_field_enabled: false,
+        number_field_enabled: false,
       })
       setSizesInput("")
       setFabricEntries([{ name: "", price: "" }])
@@ -492,6 +516,7 @@ export default function AdminPage() {
         category: "",
         description: "",
         price: 0,
+        price_on_request: false,
         image_url: "",
         images: [],
         image_positions: [],
@@ -500,6 +525,8 @@ export default function AdminPage() {
         lead_time: "7-10 días",
         active: true,
         club_ids: [],
+        name_field_enabled: false,
+        number_field_enabled: false,
       })
       setSizesInput("")
       setFabricEntries([{ name: "", price: "" }])
@@ -576,6 +603,8 @@ export default function AdminPage() {
       lead_time: product.lead_time || "7-10 días",
       active: product.active !== undefined ? product.active : true,
       club_ids: productClubIds,
+      name_field_enabled: product.name_field_enabled || false,
+      number_field_enabled: product.number_field_enabled || false,
     })
     // Populate input fields for editing
     setSizesInput(Array.isArray(product.sizes) ? product.sizes.join(", ") : "")
@@ -984,13 +1013,25 @@ export default function AdminPage() {
 
   const loadClubs = async () => {
     try {
-      const response = await fetch("/api/clubs")
+      const response = await fetch("/api/clubs?type=club")
       const data = await response.json()
       if (data.clubs) {
         setClubs(data.clubs)
       }
     } catch (error) {
       console.error("Error loading clubs:", error)
+    }
+  }
+
+  const loadOrganizations = async () => {
+    try {
+      const response = await fetch("/api/clubs?type=organization")
+      const data = await response.json()
+      if (data.clubs) {
+        setOrganizations(data.clubs)
+      }
+    } catch (error) {
+      console.error("Error loading organizations:", error)
     }
   }
 
@@ -1045,7 +1086,7 @@ export default function AdminPage() {
         message: "Club creado exitosamente",
         type: "success",
       })
-      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
+      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0, client_type: "club", background_type: "color", background_value: "#1a1a1a", background_image_url: "" })
       setIsClubModalOpen(false)
       loadClubs()
     } catch (error) {
@@ -1087,7 +1128,7 @@ export default function AdminPage() {
         message: "Club actualizado exitosamente",
         type: "success",
       })
-      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0 })
+      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0, client_type: "club", background_type: "color", background_value: "#1a1a1a", background_image_url: "" })
       setEditingClub(null)
       setIsClubModalOpen(false)
       loadClubs()
@@ -1141,6 +1182,7 @@ export default function AdminPage() {
       description: club.description || "",
       logo_url: club.logo_url || "",
       order_index: club.order_index || 0,
+      client_type: club.client_type || "club",
       background_type: club.background_type || "color",
       background_value: club.background_value || "#1a1a1a",
       background_image_url: club.background_image_url || "",
@@ -1156,6 +1198,7 @@ export default function AdminPage() {
       description: "",
       logo_url: "",
       order_index: 0,
+      client_type: "club",
       background_type: "color",
       background_value: "#1a1a1a",
       background_image_url: "",
@@ -1243,6 +1286,193 @@ export default function AdminPage() {
         message: error instanceof Error ? error.message : "Error al actualizar productos del club",
         type: "error",
       })
+    }
+  }
+
+  // Organization CRUD functions
+  const addOrganization = async () => {
+    if (!newOrganization.name) {
+      setAlertModal({
+        isOpen: true,
+        message: "Por favor completa el nombre de la organización",
+        type: "error",
+      })
+      return
+    }
+
+    try {
+      const orgData = {
+        ...newOrganization,
+        slug: newOrganization.slug || newOrganization.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, ""),
+      }
+
+      const response = await fetch("/api/clubs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orgData),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al crear organización")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Organización creada exitosamente",
+        type: "success",
+      })
+      setNewOrganization({ name: "", slug: "", description: "", logo_url: "", order_index: 0, client_type: "organization", background_type: "color", background_value: "#1a1a1a", background_image_url: "" })
+      setIsOrganizationModalOpen(false)
+      loadOrganizations()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al crear organización",
+        type: "error",
+      })
+    }
+  }
+
+  const updateOrganization = async (id: number) => {
+    try {
+      const orgData = {
+        ...newOrganization,
+        slug: newOrganization.slug || newOrganization.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, ""),
+      }
+
+      const response = await fetch(`/api/clubs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orgData),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al actualizar organización")
+      }
+
+      setAlertModal({
+        isOpen: true,
+        message: "Organización actualizada exitosamente",
+        type: "success",
+      })
+      setNewOrganization({ name: "", slug: "", description: "", logo_url: "", order_index: 0, client_type: "organization", background_type: "color", background_value: "#1a1a1a", background_image_url: "" })
+      setEditingOrganization(null)
+      setIsOrganizationModalOpen(false)
+      loadOrganizations()
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: error instanceof Error ? error.message : "Error al actualizar organización",
+        type: "error",
+      })
+    }
+  }
+
+  const deleteOrganization = async (id: number) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Eliminar Organización",
+      message: "¿Estás seguro de que deseas eliminar esta organización? Esta acción no se puede deshacer.",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/clubs/${id}`, {
+            method: "DELETE",
+          })
+          const data = await response.json()
+
+          if (!response.ok) {
+            throw new Error(data.error || "Error al eliminar organización")
+          }
+
+          setAlertModal({
+            isOpen: true,
+            message: "Organización eliminada exitosamente",
+            type: "success",
+          })
+          loadOrganizations()
+        } catch (error) {
+          setAlertModal({
+            isOpen: true,
+            message: error instanceof Error ? error.message : "Error al eliminar organización",
+            type: "error",
+          })
+        }
+      },
+    })
+  }
+
+  const startEditOrganization = (org: any) => {
+    setEditingOrganization(org.id)
+    setNewOrganization({
+      name: org.name,
+      slug: org.slug || "",
+      description: org.description || "",
+      logo_url: org.logo_url || "",
+      order_index: org.order_index || 0,
+      client_type: org.client_type || "organization",
+      background_type: org.background_type || "color",
+      background_value: org.background_value || "#1a1a1a",
+      background_image_url: org.background_image_url || "",
+    })
+    setIsOrganizationModalOpen(true)
+  }
+
+  const cancelEditOrganization = () => {
+    setEditingOrganization(null)
+    setNewOrganization({
+      name: "",
+      slug: "",
+      description: "",
+      logo_url: "",
+      order_index: 0,
+      client_type: "organization",
+      background_type: "color",
+      background_value: "#1a1a1a",
+      background_image_url: "",
+    })
+    setIsOrganizationModalOpen(false)
+  }
+
+  const updateOrganizationOrder = async (orgId: number, direction: "up" | "down") => {
+    const index = organizations.findIndex((o) => o.id === orgId)
+    if (direction === "up" && index > 0) {
+      const newOrder = organizations[index - 1].order_index
+      await fetch(`/api/clubs/${orgId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: newOrder }),
+      })
+      await fetch(`/api/clubs/${organizations[index - 1].id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: organizations[index].order_index }),
+      })
+      loadOrganizations()
+    } else if (direction === "down" && index < organizations.length - 1) {
+      const newOrder = organizations[index + 1].order_index
+      await fetch(`/api/clubs/${orgId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: newOrder }),
+      })
+      await fetch(`/api/clubs/${organizations[index + 1].id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_index: organizations[index].order_index }),
+      })
+      loadOrganizations()
     }
   }
 
@@ -1412,6 +1642,17 @@ export default function AdminPage() {
           >
             <Users className="h-5 w-5 inline mr-2" />
             Clubes
+          </button>
+          <button
+            onClick={() => changeTab("organizations")}
+            className={`py-4 px-2 font-bold border-b-2 transition`}
+            style={{
+              borderBottomColor: activeTab === "organizations" ? "var(--gros-red)" : "transparent",
+              color: activeTab === "organizations" ? "var(--gros-red)" : "#666666",
+            }}
+          >
+            <Users className="h-5 w-5 inline mr-2" />
+            Organizaciones
           </button>
           <button
             onClick={() => changeTab("carousel")}
@@ -1776,6 +2017,94 @@ export default function AdminPage() {
             </div>
           )}
 
+          {activeTab === "organizations" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold" style={{ color: "var(--gros-black)" }}>
+                  Organizaciones ({organizations.length})
+                </h2>
+                <Button
+                  onClick={() => setIsOrganizationModalOpen(true)}
+                  className="hover:opacity-90 font-bold"
+                  style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Nueva Organización
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {organizations.map((org, idx) => (
+                    <Card key={org.id} className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">NOMBRE</p>
+                          <p className="font-bold" style={{ color: "var(--gros-black)" }}>
+                            {org.name}
+                          </p>
+                          <p className="text-xs text-gray-500">/{org.slug}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">DESCRIPCIÓN</p>
+                          <p className="text-sm" style={{ color: "var(--gros-black)" }}>
+                            {org.description || "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">ORDEN</p>
+                          <p className="font-bold" style={{ color: "var(--gros-red)" }}>
+                            {org.order_index}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">ESTADO</p>
+                          <p className="font-bold text-green-600">{org.active ? "Activo" : "Inactivo"}</p>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              onClick={() => updateOrganizationOrder(org.id, "up")}
+                              disabled={idx === 0}
+                              className="hover:opacity-90"
+                              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                            >
+                              ↑
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => updateOrganizationOrder(org.id, "down")}
+                              disabled={idx === organizations.length - 1}
+                              className="hover:opacity-90"
+                              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                            >
+                              ↓
+                            </Button>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => startEditOrganization(org)}
+                            className="hover:opacity-90"
+                            style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => deleteOrganization(org.id)}
+                            variant="outline"
+                            className="border-red-500 text-red-500 hover:bg-red-50"
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                      </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === "carousel" && (
             <div>
               <div className="flex items-center justify-between mb-6">
@@ -1914,19 +2243,41 @@ export default function AdminPage() {
             </div>
             <div>
               <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                Precio *
+                Precio {!newProduct.price_on_request && "*"}
               </label>
-              <Input
-                type="number"
-                value={newProduct.price}
-                onChange={(e) =>
-                  setNewProduct({
-                    ...newProduct,
-                    price: Number.parseFloat(e.target.value),
-                  })
-                }
-                placeholder="0.00"
-              />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="price_on_request"
+                    checked={newProduct.price_on_request}
+                    onChange={(e) =>
+                      setNewProduct({
+                        ...newProduct,
+                        price_on_request: e.target.checked,
+                        price: e.target.checked ? 0 : newProduct.price,
+                      })
+                    }
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="price_on_request" className="text-sm font-medium">
+                    Solicitar cotización (sin precio)
+                  </label>
+                </div>
+                {!newProduct.price_on_request && (
+                  <Input
+                    type="number"
+                    value={newProduct.price}
+                    onChange={(e) =>
+                      setNewProduct({
+                        ...newProduct,
+                        price: Number.parseFloat(e.target.value),
+                      })
+                    }
+                    placeholder="0.00"
+                  />
+                )}
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1984,13 +2335,13 @@ export default function AdminPage() {
             </div>
             <div>
               <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-                Tipos de Tela y Precios
+                Tipos de Tela {!newProduct.price_on_request && "y Precios"}
               </label>
               <div className="space-y-2">
                 {fabricEntries.map((entry, index) => (
                   <div key={index} className="flex gap-2 items-center">
                     <Input
-                      value={entry.name}
+                      value={entry.name || ""}
                       onChange={(e) => {
                         const newEntries = [...fabricEntries]
                         newEntries[index].name = e.target.value
@@ -1999,8 +2350,8 @@ export default function AdminPage() {
                       onBlur={() => {
                         const fabricsObj: Record<string, number> = {}
                         fabricEntries.forEach((entry) => {
-                          if (entry.name.trim() && entry.price.trim()) {
-                            fabricsObj[entry.name.trim()] = Number.parseFloat(entry.price) || 0
+                          if (entry.name.trim()) {
+                            fabricsObj[entry.name.trim()] = newProduct.price_on_request ? 0 : (Number.parseFloat(entry.price) || 0)
                           }
                         })
                         setNewProduct({ ...newProduct, fabrics: fabricsObj })
@@ -2008,26 +2359,28 @@ export default function AdminPage() {
                       placeholder="Nombre (ej: Algodón)"
                       className="flex-1"
                     />
-                    <Input
-                      type="number"
-                      value={entry.price}
-                      onChange={(e) => {
-                        const newEntries = [...fabricEntries]
-                        newEntries[index].price = e.target.value
-                        setFabricEntries(newEntries)
-                      }}
-                      onBlur={() => {
-                        const fabricsObj: Record<string, number> = {}
-                        fabricEntries.forEach((entry) => {
-                          if (entry.name.trim() && entry.price.trim()) {
-                            fabricsObj[entry.name.trim()] = Number.parseFloat(entry.price) || 0
-                          }
-                        })
-                        setNewProduct({ ...newProduct, fabrics: fabricsObj })
-                      }}
-                      placeholder="Precio"
-                      className="w-32"
-                    />
+                    {!newProduct.price_on_request && (
+                      <Input
+                        type="number"
+                        value={entry.price || ""}
+                        onChange={(e) => {
+                          const newEntries = [...fabricEntries]
+                          newEntries[index].price = e.target.value
+                          setFabricEntries(newEntries)
+                        }}
+                        onBlur={() => {
+                          const fabricsObj: Record<string, number> = {}
+                          fabricEntries.forEach((entry) => {
+                            if (entry.name.trim() && entry.price.trim()) {
+                              fabricsObj[entry.name.trim()] = Number.parseFloat(entry.price) || 0
+                            }
+                          })
+                          setNewProduct({ ...newProduct, fabrics: fabricsObj })
+                        }}
+                        placeholder="Precio"
+                        className="w-32"
+                      />
+                    )}
                     {fabricEntries.length > 1 && (
                       <Button
                         type="button"
@@ -2114,7 +2467,36 @@ export default function AdminPage() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Campos de Personalización
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={newProduct.name_field_enabled}
+                    onChange={(e) => setNewProduct({ ...newProduct, name_field_enabled: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm" style={{ color: "var(--gros-black)" }}>
+                    Solicitar NOMBRE (ej: nombre a estampar en la prenda)
+                  </span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={newProduct.number_field_enabled}
+                    onChange={(e) => setNewProduct({ ...newProduct, number_field_enabled: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm" style={{ color: "var(--gros-black)" }}>
+                    Solicitar NÚMERO (ej: número a estampar en la prenda)
+                  </span>
+                </label>
+              </div>
+            </div>
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -2241,25 +2623,7 @@ export default function AdminPage() {
               />
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
-              Descripción (Opcional)
-            </label>
-            <Input
-              value={newClub.description}
-              onChange={(e) => setNewClub({ ...newClub, description: e.target.value })}
-              placeholder="Descripción del club"
-            />
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <ImageUpload
-                label="Logo del Club (Opcional)"
-                value={newClub.logo_url}
-                onChange={(url) => setNewClub({ ...newClub, logo_url: url })}
-                onRemove={() => setNewClub({ ...newClub, logo_url: "" })}
-              />
-            </div>
             <div>
               <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
                 Orden
@@ -2276,6 +2640,24 @@ export default function AdminPage() {
                 placeholder="0"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+              Descripción (Opcional)
+            </label>
+            <Input
+              value={newClub.description}
+              onChange={(e) => setNewClub({ ...newClub, description: e.target.value })}
+              placeholder="Descripción del club"
+            />
+          </div>
+          <div>
+            <ImageUpload
+              label="Logo del Club (Opcional)"
+              value={newClub.logo_url}
+              onChange={(url) => setNewClub({ ...newClub, logo_url: url })}
+              onRemove={() => setNewClub({ ...newClub, logo_url: "" })}
+            />
           </div>
 
           {/* Background Customization */}
@@ -2391,6 +2773,88 @@ export default function AdminPage() {
               {editingClub ? "Actualizar Club" : "Crear Club"}
             </Button>
             <Button onClick={cancelEditClub} variant="outline" className="font-bold">
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Organization Modal */}
+      <Modal
+        isOpen={isOrganizationModalOpen}
+        onClose={cancelEditOrganization}
+        title={editingOrganization ? "Editar Organización" : "Nueva Organización"}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Nombre *
+              </label>
+              <Input
+                value={newOrganization.name}
+                onChange={(e) => setNewOrganization({ ...newOrganization, name: e.target.value })}
+                placeholder="Nombre de la organización"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Orden
+              </label>
+              <Input
+                type="number"
+                value={newOrganization.order_index}
+                onChange={(e) =>
+                  setNewOrganization({
+                    ...newOrganization,
+                    order_index: Number.parseInt(e.target.value),
+                  })
+                }
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+                Slug (Opcional)
+              </label>
+              <Input
+                value={newOrganization.slug}
+                onChange={(e) => setNewOrganization({ ...newOrganization, slug: e.target.value })}
+                placeholder="mi-organizacion"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+              Descripción (Opcional)
+            </label>
+            <Input
+              value={newOrganization.description}
+              onChange={(e) => setNewOrganization({ ...newOrganization, description: e.target.value })}
+              placeholder="Descripción de la organización"
+            />
+          </div>
+          <div>
+            <ImageUpload
+              label="Logo de la Organización (Opcional)"
+              value={newOrganization.logo_url}
+              onChange={(url) => setNewOrganization({ ...newOrganization, logo_url: url })}
+              onRemove={() => setNewOrganization({ ...newOrganization, logo_url: "" })}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={editingOrganization ? () => updateOrganization(editingOrganization) : addOrganization}
+              className="hover:opacity-90 font-bold"
+              style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
+            >
+              {editingOrganization ? "Actualizar Organización" : "Crear Organización"}
+            </Button>
+            <Button onClick={cancelEditOrganization} variant="outline" className="font-bold">
               Cancelar
             </Button>
           </div>

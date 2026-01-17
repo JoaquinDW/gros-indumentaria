@@ -237,6 +237,7 @@ export default function ClubPage() {
                   id={product.id}
                   name={product.name}
                   price={product.price}
+                  priceOnRequest={product.price_on_request}
                   image={(product.images && product.images[0]) || product.image_url || "/placeholder.svg"}
                   category={product.category}
                 />

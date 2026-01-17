@@ -7,11 +7,12 @@ interface ProductCardProps {
   name: string
   category: string
   price: number
+  priceOnRequest?: boolean
   image: string
   description?: string
 }
 
-export function ProductCard({ id, name, category, price, image, description }: ProductCardProps) {
+export function ProductCard({ id, name, category, price, priceOnRequest, image, description }: ProductCardProps) {
   return (
     <Link href={`/producto/${id}`}>
       <Card
@@ -44,8 +45,8 @@ export function ProductCard({ id, name, category, price, image, description }: P
             </p>
           )}
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold" style={{ color: "var(--gros-red)" }}>
-              ${price}
+            <span className="text-xl font-bold" style={{ color: "var(--gros-red)" }}>
+              {priceOnRequest ? "Solicitar cotización" : `$${price}`}
             </span>
             <Button
               size="sm"

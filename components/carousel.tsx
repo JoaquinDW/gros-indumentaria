@@ -1,12 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import { MagneticButton } from "@/components/magnetic-button"
-import { AnimatedTitle } from "@/components/animated-text"
 
 interface CarouselSlide {
   id: number
@@ -23,7 +21,6 @@ interface CarouselProps {
 
 export function Carousel({ slides }: CarouselProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [autoPlay, setAutoPlay] = useState(true)
   const [direction, setDirection] = useState(0)
 
   // Parallax effect for the background
@@ -31,7 +28,7 @@ export function Carousel({ slides }: CarouselProps) {
   const y = useTransform(scrollY, [0, 500], [0, 150])
 
   useEffect(() => {
-    if (!autoPlay || slides.length === 0) return
+    if (slides.length === 0) return
 
     const interval = setInterval(() => {
       setDirection(1)
@@ -39,12 +36,17 @@ export function Carousel({ slides }: CarouselProps) {
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [autoPlay, slides.length])
+  }, [slides.length])
 
   if (slides.length === 0) {
     return (
-      <div className="w-full h-96 flex items-center justify-center" style={{ backgroundColor: "var(--gros-sand)" }}>
-        <p style={{ color: "var(--gros-black)" }}>No hay imágenes en el carrusel</p>
+      <div
+        className="w-full h-96 flex items-center justify-center"
+        style={{ backgroundColor: "var(--gros-sand)" }}
+      >
+        <p style={{ color: "var(--gros-black)" }}>
+          No hay imágenes en el carrusel
+        </p>
       </div>
     )
   }
@@ -82,11 +84,7 @@ export function Carousel({ slides }: CarouselProps) {
   }
 
   return (
-    <div
-      className="relative w-full h-96 md:h-screen overflow-hidden"
-      onMouseEnter={() => setAutoPlay(false)}
-      onMouseLeave={() => setAutoPlay(true)}
-    >
+    <div className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden">
       {/* Slides with AnimatePresence for smooth transitions */}
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
@@ -117,7 +115,10 @@ export function Carousel({ slides }: CarouselProps) {
           {/* Parallax background image */}
           <motion.div style={{ y }} className="absolute inset-0 -top-32">
             <img
-              src={slide.image_url || "/placeholder.svg?height=1080&width=1920&query=carousel"}
+              src={
+                slide.image_url ||
+                "/placeholder.svg?height=1080&width=1920&query=carousel"
+              }
               alt={slide.title}
               className="w-full h-[calc(100%+8rem)] object-cover"
             />
@@ -138,7 +139,11 @@ export function Carousel({ slides }: CarouselProps) {
                 key={`title-${currentSlide}`}
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                transition={{
+                  duration: 0.8,
+                  delay: 0.2,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
                 className="text-4xl md:text-6xl font-bold font-serif mb-4 text-balance"
               >
                 {slide.title}
@@ -148,7 +153,11 @@ export function Carousel({ slides }: CarouselProps) {
                   key={`desc-${currentSlide}`}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{
+                    duration: 0.8,
+                    delay: 0.4,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
                   className="text-lg md:text-2xl mb-8"
                 >
                   {slide.description}
@@ -159,7 +168,11 @@ export function Carousel({ slides }: CarouselProps) {
                   key={`cta-${currentSlide}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{
+                    duration: 0.8,
+                    delay: 0.6,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
                 >
                   <Link href={slide.cta_link}>
                     <MagneticButton
@@ -198,7 +211,7 @@ export function Carousel({ slides }: CarouselProps) {
       </motion.button>
 
       {/* Dots Indicator with animations */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 flex gap-2">
         {slides.map((_, idx) => (
           <motion.button
             key={idx}
@@ -211,12 +224,31 @@ export function Carousel({ slides }: CarouselProps) {
             className="h-3 rounded-full transition-all duration-300"
             animate={{
               width: idx === currentSlide ? 32 : 12,
-              backgroundColor: idx === currentSlide ? "var(--gros-red)" : "rgba(255, 255, 255, 0.5)",
+              backgroundColor:
+                idx === currentSlide
+                  ? "var(--gros-red)"
+                  : "rgba(255, 255, 255, 0.5)",
             }}
             transition={{ duration: 0.3 }}
           />
         ))}
       </div>
+
+      {/* Scroll Down Indicator */}
+      <motion.div
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1, duration: 0.8 }}
+      >
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          className="flex flex-col items-center"
+        >
+          <ChevronDown className="h-8 w-8 text-white drop-shadow-lg" />
+        </motion.div>
+      </motion.div>
     </div>
   )
 }

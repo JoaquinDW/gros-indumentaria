@@ -24,6 +24,7 @@ export async function PATCH(
       category,
       description,
       price,
+      price_on_request,
       image_url,
       images,
       sizes,
@@ -31,6 +32,8 @@ export async function PATCH(
       fabrics,
       lead_time,
       active,
+      name_field_enabled,
+      number_field_enabled,
     } = body
 
     // Validate images array if provided
@@ -46,7 +49,20 @@ export async function PATCH(
     if (name !== undefined) updateData.name = name
     if (category !== undefined) updateData.category = category
     if (description !== undefined) updateData.description = description
-    if (price !== undefined) updateData.price = price
+
+    // Handle price_on_request logic
+    if (price_on_request !== undefined) {
+      updateData.price_on_request = price_on_request
+      // If price_on_request is true, set price to null
+      if (price_on_request) {
+        updateData.price = null
+      }
+    }
+
+    // Only update price if provided and price_on_request is not true
+    if (price !== undefined && !price_on_request) {
+      updateData.price = price
+    }
 
     // Handle images update
     if (images !== undefined) {
@@ -63,6 +79,8 @@ export async function PATCH(
     if (fabrics !== undefined) updateData.fabrics = fabrics
     if (lead_time !== undefined) updateData.lead_time = lead_time
     if (active !== undefined) updateData.active = active
+    if (name_field_enabled !== undefined) updateData.name_field_enabled = name_field_enabled
+    if (number_field_enabled !== undefined) updateData.number_field_enabled = number_field_enabled
     updateData.updated_at = new Date().toISOString()
 
     const { data: product, error } = await supabase

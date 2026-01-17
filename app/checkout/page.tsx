@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { useCart } from "@/hooks/use-cart"
 import { ArrowRight, Loader2 } from "lucide-react"
 import { AlertModal } from "@/components/ui/alert-modal"
+import { GeorefLocationSelector } from "@/components/georef-location-selector"
 
 interface Club {
   id: number
@@ -40,6 +41,8 @@ export default function CheckoutPage() {
     phone: "",
     address: "",
     province: "",
+    provinceName: "",
+    locality: "",
     notes: "",
     deliveryMethod: "correo" as "correo" | "club",
     clubId: "",
@@ -136,7 +139,9 @@ export default function CheckoutPage() {
       const orderSummary = items
         .map((item) => {
           const fabricText = item.fabric && item.fabric !== "Sin especificar" ? `, ${item.fabric}` : ""
-          return `${item.quantity}x ${item.name} (${item.size}, ${item.color}${fabricText}) - $${item.price * item.quantity}`
+          const nameTextLine = item.personalizationName ? `\n  Nombre: ${item.personalizationName}` : ""
+          const numberTextLine = item.personalizationNumber ? `\n  Número: ${item.personalizationNumber}` : ""
+          return `${item.quantity}x ${item.name} (${item.size}, ${item.color}${fabricText}) - $${item.price * item.quantity}${nameTextLine}${numberTextLine}`
         })
         .join("\n")
 
@@ -146,7 +151,7 @@ export default function CheckoutPage() {
         const selectedClub = clubs.find((c) => c.id.toString() === formData.clubId)
         deliveryInfo = `\n\nMétodo de entrega: Retiro en el club\nClub: ${selectedClub?.name || "No especificado"}`
       } else {
-        deliveryInfo = `\n\nMétodo de entrega: Envío a domicilio (Correo Argentino)\nDirección: ${formData.address}\nProvincia: ${formData.province}`
+        deliveryInfo = `\n\nMétodo de entrega: Envío a domicilio (Correo Argentino)\nDirección: ${formData.address}\nLocalidad: ${formData.locality}\nProvincia: ${formData.provinceName}`
       }
 
       const message = `Hola! Quiero hacer un pedido:\n\n${orderSummary}\n\nTotal: $${total}\n\nDatos de contacto:\nNombre: ${formData.name}\nEmail: ${formData.email}\nTeléfono: ${formData.phone}${deliveryInfo}${formData.notes ? `\n\nNotas: ${formData.notes}` : ""}`
@@ -225,24 +230,24 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-gros-black mb-2">Provincia</label>
-                  <select
-                    name="province"
-                    value={formData.province}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded"
-                  >
-                    <option value="">Selecciona una provincia</option>
-                    <option value="Buenos Aires">Buenos Aires</option>
-                    <option value="CABA">CABA</option>
-                    <option value="Córdoba">Córdoba</option>
-                    <option value="Rosario">Rosario</option>
-                    <option value="Mendoza">Mendoza</option>
-                    <option value="La Plata">La Plata</option>
-                    <option value="Otras">Otras</option>
-                  </select>
-                </div>
+                <GeorefLocationSelector
+                  province={formData.province}
+                  locality={formData.locality}
+                  onProvinceChange={(provinceId, provinceName) => {
+                    setFormData({
+                      ...formData,
+                      province: provinceId,
+                      provinceName: provinceName,
+                      locality: "", // Reset locality when province changes
+                    })
+                  }}
+                  onLocalityChange={(localityName) => {
+                    setFormData({
+                      ...formData,
+                      locality: localityName,
+                    })
+                  }}
+                />
 
                 {/* Delivery Method */}
                 <div>

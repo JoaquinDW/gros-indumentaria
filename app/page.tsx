@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
 import { Carousel } from "@/components/carousel"
-import { ClientsSection } from "@/components/clients-section"
+import { ClubsSection } from "@/components/clubs-section"
+import { OrganizationsSection } from "@/components/organizations-section"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { ScrollReveal } from "@/components/scroll-reveal"
 import { MagneticButton, AnimatedButton } from "@/components/magnetic-button"
@@ -110,7 +111,7 @@ export default function Home() {
         style={{ backgroundColor: "var(--gros-white)" }}
       >
         {/* Patrón de fondo inspirado en el logo de Gros */}
-        <GrosBackgroundPattern opacity={0.35} variant="mixed" />
+        {/* <GrosBackgroundPattern opacity={0.35} variant="mixed" /> */}
 
         <div className="max-w-7xl mx-auto relative z-10">
           <ScrollReveal>
@@ -142,7 +143,9 @@ export default function Home() {
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">No hay productos disponibles en este momento</p>
+              <p className="text-gray-500 mb-4">
+                No hay productos disponibles en este momento
+              </p>
               <Link href="/clubes">
                 <Button
                   style={{
@@ -176,7 +179,11 @@ export default function Home() {
 
                         <motion.div
                           whileHover={{ scale: 1.02 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                          }}
                         >
                           <div
                             className="relative overflow-hidden"
@@ -197,7 +204,9 @@ export default function Home() {
                               className="absolute top-4 right-0 text-white px-4 py-2 transform rotate-45 origin-right translate-x-12 text-sm font-bold overflow-hidden"
                               style={{ backgroundColor: "var(--gros-red)" }}
                             >
-                              <span className="relative z-10">PERSONALIZADO</span>
+                              <span className="relative z-10">
+                                PERSONALIZADO
+                              </span>
                               <motion.div
                                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
                                 animate={{
@@ -227,10 +236,12 @@ export default function Home() {
                             <div className="flex items-center justify-between">
                               <motion.span
                                 whileHover={{ scale: 1.1 }}
-                                className="text-2xl font-bold"
+                                className="text-xl font-bold"
                                 style={{ color: "var(--gros-red)" }}
                               >
-                                ${product.price}
+                                {product.price_on_request
+                                  ? "Solicitar cotización"
+                                  : `$${product.price}`}
                               </motion.span>
                               <motion.div
                                 whileHover={{ scale: 1.05 }}
@@ -244,7 +255,9 @@ export default function Home() {
                                   }}
                                   className="hover:opacity-90"
                                 >
-                                  Agregar
+                                  {product.price_on_request
+                                    ? "Ver más"
+                                    : "Agregar"}
                                 </Button>
                               </motion.div>
                             </div>
@@ -282,8 +295,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Clients Section */}
-      <ClientsSection />
+      {/* Clubs Section */}
+      <ClubsSection />
+
+      {/* Organizations Section */}
+      <OrganizationsSection />
 
       {/* Services Section */}
       <section
@@ -375,7 +391,7 @@ export default function Home() {
                       stiffness: 300,
                       damping: 20,
                     }}
-                    className="p-8 rounded-2xl shadow-lg backdrop-blur-sm border border-white/20 h-full relative overflow-hidden group"
+                    className="p-8  shadow-lg backdrop-blur-sm border border-white/20 h-full relative overflow-hidden group"
                     style={{
                       background:
                         "linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%)",
@@ -398,7 +414,10 @@ export default function Home() {
                         backgroundColor: `${service.color}20`,
                       }}
                     >
-                      <Icon className="w-8 h-8" style={{ color: service.color }} />
+                      <Icon
+                        className="w-8 h-8"
+                        style={{ color: service.color }}
+                      />
                     </motion.div>
 
                     <h3
