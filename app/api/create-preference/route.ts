@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { MercadoPagoConfig, Preference } from "mercadopago"
+import { createClient } from "@supabase/supabase-js"
 
 export async function POST(request: NextRequest) {
   try {
@@ -107,6 +108,45 @@ export async function POST(request: NextRequest) {
 
     // Create the preference
     const response = await preference.create({ body: preferenceData })
+
+    // Initialize Supabase client with service role key
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // Create order with "pending" status BEFORE redirecting to MercadoPago
+    // This ensures we have a record even if the webhook fails
+    const { error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        order_number: externalReference,
+        customer_name: customerData.name || "",
+        customer_email: customerData.email || "",
+        customer_phone: customerData.phone || "",
+        customer_address: customerData.address || "",
+        customer_province: customerData.provinceName || customerData.province || "",
+        customer_locality: customerData.locality || "",
+        items: items,
+        total_amount: mpItems.reduce((sum: number, item: any) => sum + item.unit_price * item.quantity, 0),
+        status: "pending",
+        payment_status: "pending",
+        payment_method: "mercado_pago",
+        external_reference: externalReference,
+        mercado_pago_preference_id: response.id,
+        notes: customerData.notes || "",
+        delivery_method: customerData.deliveryMethod || "correo",
+        club_id: customerData.clubId ? parseInt(customerData.clubId) : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+
+    if (orderError) {
+      console.error("Error creating pending order:", orderError)
+      // Continue anyway - the webhook will create the order if this fails
+    } else {
+      console.log(`Order ${externalReference} created with status pending`)
+    }
 
     // Return the init_point (checkout URL)
     return NextResponse.json({

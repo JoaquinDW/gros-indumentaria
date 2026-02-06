@@ -570,7 +570,7 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               className="mb-2 text-lg"
             >
-              Gros Indumentaria © 2025
+              GROS Indumentaria © 2025
             </motion.p>
             <motion.p
               initial={{ opacity: 0 }}

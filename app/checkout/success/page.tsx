@@ -15,12 +15,13 @@ export default function CheckoutSuccessPage() {
   const status = searchParams.get("status")
   const { clearCart } = useCart()
 
-  // Clear cart on successful payment
+  // Clear cart when redirected from MercadoPago
+  // The webhook will handle the actual payment status
   useEffect(() => {
-    if (method === "mercadopago" && status === "approved") {
+    if (method === "mercadopago") {
       clearCart()
     }
-  }, [method, status, clearCart])
+  }, [method, clearCart])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">

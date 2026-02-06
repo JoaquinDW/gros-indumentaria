@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { notifyRelatedClubs } from "@/lib/email"
 
 /**
  * Get a specific order by ID
@@ -56,6 +57,16 @@ export async function PATCH(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    // Get current order to check for status change
+    const { data: currentOrder } = await supabase
+      .from("orders")
+      .select("status")
+      .eq("id", id)
+      .single()
+
+    const oldStatus = currentOrder?.status
+    const newStatus = body.status
+
     // Update order
     const { data: order, error } = await supabase
       .from("orders")
@@ -70,6 +81,15 @@ export async function PATCH(
     if (error) {
       console.error("Error updating order:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // If status changed, notify related clubs
+    if (newStatus && oldStatus !== newStatus && order) {
+      try {
+        await notifyRelatedClubs(order, "status_change", supabase, newStatus)
+      } catch (emailError) {
+        console.error("Error sending club status notifications:", emailError)
+      }
     }
 
     return NextResponse.json({ order })

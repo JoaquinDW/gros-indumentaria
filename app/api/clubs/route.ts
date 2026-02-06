@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, slug, description, logo_url, order_index, active, client_type, background_type, background_value, background_image_url } = body
+    const { name, slug, description, logo_url, order_index, active, client_type, background_type, background_value, background_image_url, email } = body
 
     if (!name) {
       return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 })
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
         background_type: background_type || 'color',
         background_value: background_value || '#1a1a1a',
         background_image_url: background_image_url || null,
+        email: email || null,
       })
       .select()
       .single()

@@ -31,7 +31,7 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     setFormData({
       ...formData,
@@ -145,7 +145,7 @@ export default function ContactPage() {
               {
                 icon: Mail,
                 title: "Email",
-                content: "graficagros@gmail.com",
+                content: "grosindumentaria@gmail.com",
               },
               {
                 icon: MapPin,

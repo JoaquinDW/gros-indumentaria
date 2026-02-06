@@ -1,6 +1,49 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { MercadoPagoConfig, Payment } from "mercadopago"
 import { createClient } from "@supabase/supabase-js"
+import crypto from "crypto"
+import { notifyRelatedClubs } from "@/lib/email"
+
+/**
+ * Validates MercadoPago webhook signature
+ * Documentation: https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks
+ */
+function validateWebhookSignature(
+  xSignature: string | null,
+  xRequestId: string | null,
+  dataId: string,
+  secret: string
+): boolean {
+  if (!xSignature || !xRequestId) {
+    return false
+  }
+
+  // Parse x-signature header (format: "ts=...,v1=...")
+  const parts = xSignature.split(",")
+  let ts: string | null = null
+  let hash: string | null = null
+
+  for (const part of parts) {
+    const [key, value] = part.split("=")
+    if (key === "ts") ts = value
+    if (key === "v1") hash = value
+  }
+
+  if (!ts || !hash) {
+    return false
+  }
+
+  // Build the manifest string
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+
+  // Calculate HMAC-SHA256
+  const calculatedHash = crypto
+    .createHmac("sha256", secret)
+    .update(manifest)
+    .digest("hex")
+
+  return calculatedHash === hash
+}
 
 /**
  * Mercado Pago Webhook Handler
@@ -9,10 +52,33 @@ import { createClient } from "@supabase/supabase-js"
  */
 export async function POST(request: NextRequest) {
   try {
+    // Get headers for signature validation
+    const xSignature = request.headers.get("x-signature")
+    const xRequestId = request.headers.get("x-request-id")
+
     // Get the notification data
     const body = await request.json()
 
     console.log("Mercado Pago Webhook received:", JSON.stringify(body, null, 2))
+
+    // Validate webhook signature if secret is configured
+    const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET
+    if (webhookSecret && webhookSecret !== "YOUR_WEBHOOK_SECRET_HERE") {
+      const isValid = validateWebhookSignature(
+        xSignature,
+        xRequestId,
+        body.data?.id?.toString() || "",
+        webhookSecret
+      )
+
+      if (!isValid) {
+        console.error("Invalid webhook signature")
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+      }
+      console.log("Webhook signature validated successfully")
+    } else {
+      console.warn("Webhook signature validation skipped - MERCADOPAGO_WEBHOOK_SECRET not configured")
+    }
 
     // Validate access token
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN
@@ -57,35 +123,44 @@ export async function POST(request: NextRequest) {
       console.log(`Payment ${paymentId} - Status: ${status}, Detail: ${status_detail}`)
       console.log(`Order Reference: ${external_reference}, Amount: ${transaction_amount}`)
 
-      // Check if order already exists
-      const { data: existingOrder } = await supabase
+      // Check if order already exists (should exist from create-preference)
+      const { data: existingOrder, error: fetchError } = await supabase
         .from("orders")
         .select("*")
         .eq("external_reference", external_reference)
         .single()
 
+      // Handle fetch errors (PGRST116 = not found, which is acceptable)
+      if (fetchError && fetchError.code !== "PGRST116") {
+        console.error("Error fetching order:", fetchError)
+        throw new Error(`Database fetch failed: ${fetchError.message}`)
+      }
+
+      const orderUpdateData = {
+        mercado_pago_payment_id: paymentId,
+        payment_status: status,
+        payment_status_detail: status_detail,
+        transaction_amount: transaction_amount,
+        status: mapPaymentStatusToOrderStatus(status),
+        updated_at: new Date().toISOString(),
+      }
+
       if (existingOrder) {
-        // Update existing order
+        // Update existing order (normal flow - order created in create-preference)
         const { error: updateError } = await supabase
           .from("orders")
-          .update({
-            mercado_pago_payment_id: paymentId,
-            payment_status: status,
-            payment_status_detail: status_detail,
-            transaction_amount: transaction_amount,
-            status: mapPaymentStatusToOrderStatus(status),
-            updated_at: new Date().toISOString(),
-          })
+          .update(orderUpdateData)
           .eq("id", existingOrder.id)
 
         if (updateError) {
           console.error("Error updating order:", updateError)
-          throw updateError
+          throw new Error(`Database update failed: ${updateError.message}`)
         }
 
         console.log(`✅ Order ${existingOrder.order_number} updated with payment status: ${status}`)
       } else {
-        // Create new order from webhook data (this is the source of truth)
+        // Fallback: Create order if it doesn't exist (webhook arrived before create-preference finished)
+        console.warn(`Order not found for ${external_reference}, creating from webhook data`)
         const items = additional_info?.items || []
 
         const { data: newOrder, error: insertError } = await supabase
@@ -100,35 +175,43 @@ export async function POST(request: NextRequest) {
             customer_locality: metadata?.customer_locality || "",
             items: items,
             total_amount: transaction_amount,
-            mercado_pago_payment_id: paymentId,
-            payment_status: status,
-            payment_status_detail: status_detail,
             external_reference: external_reference,
-            transaction_amount: transaction_amount,
-            status: mapPaymentStatusToOrderStatus(status),
             payment_method: "mercado_pago",
             notes: metadata?.customer_notes || "",
             delivery_method: metadata?.delivery_method || "correo",
             club_id: metadata?.club_id ? parseInt(metadata.club_id) : null,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            ...orderUpdateData,
           })
           .select()
           .single()
 
         if (insertError) {
           console.error("Error creating order:", insertError)
-          throw insertError
+          throw new Error(`Database insert failed: ${insertError.message}`)
         }
 
-        console.log(`✅ New order created: ${newOrder?.order_number}`)
+        console.log(`✅ New order created from webhook: ${newOrder?.order_number}`)
       }
 
       // Handle different payment statuses for additional actions
       switch (status) {
         case "approved":
           console.log("✅ Payment approved!")
-          // TODO: Send confirmation email
+          // Send notification to related clubs
+          try {
+            const { data: fullOrder } = await supabase
+              .from("orders")
+              .select("*")
+              .eq("external_reference", external_reference)
+              .single()
+
+            if (fullOrder) {
+              await notifyRelatedClubs(fullOrder, "new_order", supabase)
+            }
+          } catch (emailError) {
+            console.error("Error sending club notifications:", emailError)
+          }
           // TODO: Update inventory
           break
 
@@ -160,8 +243,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error processing webhook:", error)
-    // Always return 200 to avoid Mercado Pago retrying the webhook
-    return NextResponse.json({ error: "Internal error", success: false }, { status: 200 })
+    // Return 500 so MercadoPago retries the webhook (up to 3 times)
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        success: false,
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    )
   }
 }
 

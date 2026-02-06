@@ -249,6 +249,7 @@ export default function AdminPage() {
     background_type: "color",
     background_value: "#1a1a1a",
     background_image_url: "",
+    email: "",
   })
   const [editingClub, setEditingClub] = useState<number | null>(null)
   const [isClubModalOpen, setIsClubModalOpen] = useState(false)
@@ -1086,7 +1087,7 @@ export default function AdminPage() {
         message: "Club creado exitosamente",
         type: "success",
       })
-      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0, client_type: "club", background_type: "color", background_value: "#1a1a1a", background_image_url: "" })
+      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0, client_type: "club", background_type: "color", background_value: "#1a1a1a", background_image_url: "", email: "" })
       setIsClubModalOpen(false)
       loadClubs()
     } catch (error) {
@@ -1128,7 +1129,7 @@ export default function AdminPage() {
         message: "Club actualizado exitosamente",
         type: "success",
       })
-      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0, client_type: "club", background_type: "color", background_value: "#1a1a1a", background_image_url: "" })
+      setNewClub({ name: "", slug: "", description: "", logo_url: "", order_index: 0, client_type: "club", background_type: "color", background_value: "#1a1a1a", background_image_url: "", email: "" })
       setEditingClub(null)
       setIsClubModalOpen(false)
       loadClubs()
@@ -1186,6 +1187,7 @@ export default function AdminPage() {
       background_type: club.background_type || "color",
       background_value: club.background_value || "#1a1a1a",
       background_image_url: club.background_image_url || "",
+      email: club.email || "",
     })
     setIsClubModalOpen(true)
   }
@@ -1202,6 +1204,7 @@ export default function AdminPage() {
       background_type: "color",
       background_value: "#1a1a1a",
       background_image_url: "",
+      email: "",
     })
     setIsClubModalOpen(false)
   }
@@ -1709,6 +1712,7 @@ export default function AdminPage() {
                         >
                           <option value="pending">Pendiente</option>
                           <option value="approved">Aprobado</option>
+                          <option value="in_production">En producción</option>
                           <option value="shipped">Enviado</option>
                           <option value="delivered">Entregado</option>
                           <option value="rejected">Rechazado</option>
@@ -2650,6 +2654,20 @@ export default function AdminPage() {
               onChange={(e) => setNewClub({ ...newClub, description: e.target.value })}
               placeholder="Descripción del club"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
+              Email de Notificaciones (Opcional)
+            </label>
+            <Input
+              type="email"
+              value={newClub.email}
+              onChange={(e) => setNewClub({ ...newClub, email: e.target.value })}
+              placeholder="club@ejemplo.com"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Recibirá notificaciones cuando haya pedidos relacionados al club.
+            </p>
           </div>
           <div>
             <ImageUpload

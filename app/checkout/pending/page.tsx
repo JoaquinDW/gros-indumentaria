@@ -1,13 +1,21 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
+import { useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Clock } from "lucide-react"
+import { useCart } from "@/hooks/use-cart"
 
 export default function CheckoutPendingPage() {
   const searchParams = useSearchParams()
   const ref = searchParams.get("ref")
+  const { clearCart } = useCart()
+
+  // Clear cart when redirected from MercadoPago with pending status
+  useEffect(() => {
+    clearCart()
+  }, [clearCart])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
