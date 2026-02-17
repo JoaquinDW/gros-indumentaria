@@ -26,6 +26,7 @@ export function Navbar() {
   const navLinks = [
     { id: "inicio", label: "Inicio", href: "/" },
     { id: "productos", label: "Productos", href: "/clubes" },
+    { id: "nosotros", label: "Nosotros", href: "/sobre-nosotros" },
     { id: "contacto", label: "Contacto", href: "/contacto" },
   ]
 
