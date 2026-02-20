@@ -369,6 +369,7 @@ export default function AdminPage() {
   }
 
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    console.log("Updating order status:", orderId, newStatus)
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",

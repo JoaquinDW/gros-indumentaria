@@ -240,7 +240,7 @@ export async function sendCustomerNotification(
     const { subject, html } = getCustomerEmailTemplate(type, order, newStatus)
 
     const { data, error } = await resend.emails.send({
-      from: "Gros Indumentaria <notificaciones@grosindumentaria.com>",
+      from: "Gros Indumentaria <notificaciones@gros.website>",
       to: order.customer_email,
       subject,
       html,
@@ -280,7 +280,7 @@ export async function sendClubNotification(
     const { subject, html } = getClubEmailTemplate(type, order, club, newStatus)
 
     const { data, error } = await resend.emails.send({
-      from: "Gros Indumentaria <notificaciones@grosindumentaria.com>",
+      from: "Gros Indumentaria <notificaciones@gros.website>",
       to: club.email,
       subject,
       html,
