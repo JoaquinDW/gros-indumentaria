@@ -24,6 +24,7 @@ interface OrderItem {
   name?: string
   quantity: number
   unit_price?: number
+  price?: number
 }
 
 interface Order {
@@ -64,7 +65,7 @@ function formatOrderItems(items: OrderItem[]): string {
           <tr>
             <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.title || item.name || "Producto"}</td>
             <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e5e7eb;">${item.quantity}</td>
-            <td style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb;">$${item.unit_price || "-"}</td>
+            <td style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb;">$${item.unit_price || item.price || "-"}</td>
           </tr>
         `).join("")}
       </tbody>
@@ -81,7 +82,7 @@ function getClubEmailTemplate(type: "new_order" | "status_change", order: Order,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background-color: #C43A2F; padding: 20px; text-align: center;">
-            <h1 style="color: white; margin: 0;">Gros Indumentaria</h1>
+            <h1 style="color: white; margin: 0;">GROS Indumentaria</h1>
           </div>
 
           <div style="padding: 20px; background-color: #ffffff;">
@@ -105,7 +106,7 @@ function getClubEmailTemplate(type: "new_order" | "status_change", order: Order,
           </div>
 
           <div style="padding: 16px; background-color: #f3f4f6; text-align: center; font-size: 12px; color: #6b7280;">
-            <p>Este es un email automático de Gros Indumentaria.</p>
+            <p>Este es un email automático de GROS Indumentaria.</p>
           </div>
         </div>
       `
@@ -118,7 +119,7 @@ function getClubEmailTemplate(type: "new_order" | "status_change", order: Order,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #C43A2F; padding: 20px; text-align: center;">
-          <h1 style="color: white; margin: 0;">Gros Indumentaria</h1>
+          <h1 style="color: white; margin: 0;">GROS Indumentaria</h1>
         </div>
 
         <div style="padding: 20px; background-color: #ffffff;">
@@ -137,7 +138,7 @@ function getClubEmailTemplate(type: "new_order" | "status_change", order: Order,
         </div>
 
         <div style="padding: 16px; background-color: #f3f4f6; text-align: center; font-size: 12px; color: #6b7280;">
-          <p>Este es un email automático de Gros Indumentaria.</p>
+          <p>Este es un email automático de GROS Indumentaria.</p>
         </div>
       </div>
     `
@@ -149,11 +150,11 @@ function getCustomerEmailTemplate(type: "new_order" | "status_change", order: Or
 
   if (type === "new_order") {
     return {
-      subject: `Confirmación de tu pedido #${order.order_number} - Gros Indumentaria`,
+      subject: `Confirmación de tu pedido #${order.order_number} - GROS Indumentaria`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background-color: #C43A2F; padding: 20px; text-align: center;">
-            <h1 style="color: white; margin: 0;">Gros Indumentaria</h1>
+            <h1 style="color: white; margin: 0;">GROS Indumentaria</h1>
           </div>
 
           <div style="padding: 20px; background-color: #ffffff;">
@@ -178,7 +179,7 @@ function getCustomerEmailTemplate(type: "new_order" | "status_change", order: Or
 
           <div style="padding: 16px; background-color: #f3f4f6; text-align: center; font-size: 12px; color: #6b7280;">
             <p>Si tenés alguna consulta, respondé a este email o contactanos.</p>
-            <p>Gros Indumentaria</p>
+            <p>GROS Indumentaria</p>
           </div>
         </div>
       `
@@ -187,11 +188,11 @@ function getCustomerEmailTemplate(type: "new_order" | "status_change", order: Or
 
   // status_change
   return {
-    subject: `Tu pedido #${order.order_number} está ${statusLabel.toLowerCase()} - Gros Indumentaria`,
+    subject: `Tu pedido #${order.order_number} está ${statusLabel.toLowerCase()} - GROS Indumentaria`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background-color: #C43A2F; padding: 20px; text-align: center;">
-          <h1 style="color: white; margin: 0;">Gros Indumentaria</h1>
+          <h1 style="color: white; margin: 0;">GROS Indumentaria</h1>
         </div>
 
         <div style="padding: 20px; background-color: #ffffff;">
@@ -213,7 +214,7 @@ function getCustomerEmailTemplate(type: "new_order" | "status_change", order: Or
 
         <div style="padding: 16px; background-color: #f3f4f6; text-align: center; font-size: 12px; color: #6b7280;">
           <p>Si tenés alguna consulta, respondé a este email o contactanos.</p>
-          <p>Gros Indumentaria</p>
+          <p>GROS Indumentaria</p>
         </div>
       </div>
     `
@@ -240,7 +241,7 @@ export async function sendCustomerNotification(
     const { subject, html } = getCustomerEmailTemplate(type, order, newStatus)
 
     const { data, error } = await resend.emails.send({
-      from: "Gros Indumentaria <notificaciones@gros.website>",
+      from: "GROS Indumentaria <notificaciones@gros.website>",
       to: order.customer_email,
       subject,
       html,
@@ -280,7 +281,7 @@ export async function sendClubNotification(
     const { subject, html } = getClubEmailTemplate(type, order, club, newStatus)
 
     const { data, error } = await resend.emails.send({
-      from: "Gros Indumentaria <notificaciones@gros.website>",
+      from: "GROS Indumentaria <notificaciones@gros.website>",
       to: club.email,
       subject,
       html,
