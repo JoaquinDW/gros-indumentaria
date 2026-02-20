@@ -166,27 +166,8 @@ export default function AdminPage() {
     onConfirm: () => {},
   })
 
-  // Mock data
-  const [orders, setOrders] = useState([
-    {
-      id: 1,
-      orderNumber: "ORD-001",
-      customerName: "Juan Pérez",
-      customerEmail: "juan@example.com",
-      totalAmount: 2250,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      orderNumber: "ORD-002",
-      customerName: "María García",
-      customerEmail: "maria@example.com",
-      totalAmount: 5600,
-      status: "approved",
-      createdAt: new Date().toISOString(),
-    },
-  ])
+  // Orders state
+  const [orders, setOrders] = useState<any[]>([])
 
   const [products, setProducts] = useState<any[]>([])
 
@@ -304,6 +285,7 @@ export default function AdminPage() {
       loadClubs()
       loadOrganizations()
       loadCarouselImages()
+      loadOrders()
     }
   }, [isLoggedIn])
 
@@ -343,6 +325,18 @@ export default function AdminPage() {
     }
   }
 
+  const loadOrders = async () => {
+    try {
+      const response = await fetch("/api/orders")
+      const data = await response.json()
+      if (data.orders) {
+        setOrders(data.orders)
+      }
+    } catch (error) {
+      console.error("Error loading orders:", error)
+    }
+  }
+
   const handleLogin = async () => {
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({
@@ -374,8 +368,35 @@ export default function AdminPage() {
     router.push(`/admin?tab=${tab}`)
   }
 
-  const updateOrderStatus = (orderId: number, newStatus: string) => {
-    setOrders(orders.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)))
+  const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al actualizar estado")
+      }
+
+      // Actualizar estado local después de éxito en API
+      setOrders(orders.map((order) =>
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ))
+
+      setAlertModal({
+        isOpen: true,
+        message: "Estado actualizado exitosamente",
+        type: "success",
+      })
+    } catch (error) {
+      setAlertModal({
+        isOpen: true,
+        message: "Error al actualizar el estado del pedido",
+        type: "error",
+      })
+    }
   }
 
   const addProduct = async () => {
