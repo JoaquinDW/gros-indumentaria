@@ -72,7 +72,7 @@ function formatOrderItems(items: OrderItem[]): string {
   `
 }
 
-function getEmailTemplate(type: "new_order" | "status_change", order: Order, club: Club, newStatus?: string): { subject: string; html: string } {
+function getClubEmailTemplate(type: "new_order" | "status_change", order: Order, club: Club, newStatus?: string): { subject: string; html: string } {
   const statusLabel = STATUS_LABELS[newStatus || order.status] || order.status
 
   if (type === "new_order") {
@@ -144,6 +144,121 @@ function getEmailTemplate(type: "new_order" | "status_change", order: Order, clu
   }
 }
 
+function getCustomerEmailTemplate(type: "new_order" | "status_change", order: Order, newStatus?: string): { subject: string; html: string } {
+  const statusLabel = STATUS_LABELS[newStatus || order.status] || order.status
+
+  if (type === "new_order") {
+    return {
+      subject: `Confirmación de tu pedido #${order.order_number} - Gros Indumentaria`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #C43A2F; padding: 20px; text-align: center;">
+            <h1 style="color: white; margin: 0;">Gros Indumentaria</h1>
+          </div>
+
+          <div style="padding: 20px; background-color: #ffffff;">
+            <h2 style="color: #333;">¡Gracias por tu compra!</h2>
+            <p>Hola <strong>${order.customer_name}</strong>,</p>
+            <p>Hemos recibido tu pedido y ya estamos trabajando en él.</p>
+
+            <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <p style="margin: 4px 0;"><strong>Número de Pedido:</strong> ${order.order_number}</p>
+              <p style="margin: 4px 0;"><strong>Total:</strong> $${order.total_amount}</p>
+              <p style="margin: 4px 0;"><strong>Estado:</strong> ${statusLabel}</p>
+              ${order.delivery_method === "club" ? `<p style="margin: 4px 0;"><strong>Retiro:</strong> En tu club</p>` : `<p style="margin: 4px 0;"><strong>Envío a:</strong> ${order.customer_address || "Dirección no especificada"}</p>`}
+            </div>
+
+            <h3 style="color: #333;">Detalle de tu pedido:</h3>
+            ${formatOrderItems(order.items)}
+
+            ${order.notes ? `<p style="margin-top: 16px;"><strong>Notas:</strong> ${order.notes}</p>` : ""}
+
+            <p style="margin-top: 24px;">Te notificaremos cuando tu pedido cambie de estado.</p>
+          </div>
+
+          <div style="padding: 16px; background-color: #f3f4f6; text-align: center; font-size: 12px; color: #6b7280;">
+            <p>Si tenés alguna consulta, respondé a este email o contactanos.</p>
+            <p>Gros Indumentaria</p>
+          </div>
+        </div>
+      `
+    }
+  }
+
+  // status_change
+  return {
+    subject: `Tu pedido #${order.order_number} está ${statusLabel.toLowerCase()} - Gros Indumentaria`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #C43A2F; padding: 20px; text-align: center;">
+          <h1 style="color: white; margin: 0;">Gros Indumentaria</h1>
+        </div>
+
+        <div style="padding: 20px; background-color: #ffffff;">
+          <h2 style="color: #333;">Actualización de tu pedido</h2>
+          <p>Hola <strong>${order.customer_name}</strong>,</p>
+          <p>Tu pedido ha sido actualizado.</p>
+
+          <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 4px 0;"><strong>Número de Pedido:</strong> ${order.order_number}</p>
+            <p style="margin: 4px 0;"><strong>Nuevo Estado:</strong> <span style="color: #C43A2F; font-weight: bold;">${statusLabel}</span></p>
+          </div>
+
+          <h3 style="color: #333;">Detalle de tu pedido:</h3>
+          ${formatOrderItems(order.items)}
+
+          ${newStatus === "shipped" ? `<p style="margin-top: 16px; color: #059669;"><strong>¡Tu pedido está en camino!</strong></p>` : ""}
+          ${newStatus === "delivered" ? `<p style="margin-top: 16px; color: #059669;"><strong>¡Tu pedido fue entregado! Esperamos que lo disfrutes.</strong></p>` : ""}
+        </div>
+
+        <div style="padding: 16px; background-color: #f3f4f6; text-align: center; font-size: 12px; color: #6b7280;">
+          <p>Si tenés alguna consulta, respondé a este email o contactanos.</p>
+          <p>Gros Indumentaria</p>
+        </div>
+      </div>
+    `
+  }
+}
+
+export async function sendCustomerNotification(
+  order: Order,
+  type: "new_order" | "status_change",
+  newStatus?: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!order.customer_email) {
+    console.log(`Order ${order.order_number} has no customer email, skipping notification`)
+    return { success: true }
+  }
+
+  const resend = getResendClient()
+  if (!resend) {
+    console.error("RESEND_API_KEY not configured")
+    return { success: false, error: "Email service not configured" }
+  }
+
+  try {
+    const { subject, html } = getCustomerEmailTemplate(type, order, newStatus)
+
+    const { data, error } = await resend.emails.send({
+      from: "Gros Indumentaria <notificaciones@grosindumentaria.com>",
+      to: order.customer_email,
+      subject,
+      html,
+    })
+
+    if (error) {
+      console.error(`Failed to send email to customer ${order.customer_email}:`, error)
+      return { success: false, error: error.message }
+    }
+
+    console.log(`Email sent to customer ${order.customer_email} - ID: ${data?.id}`)
+    return { success: true }
+  } catch (error) {
+    console.error(`Error sending email to customer ${order.customer_email}:`, error)
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
+  }
+}
+
 export async function sendClubNotification(
   club: Club,
   order: Order,
@@ -162,7 +277,7 @@ export async function sendClubNotification(
   }
 
   try {
-    const { subject, html } = getEmailTemplate(type, order, club, newStatus)
+    const { subject, html } = getClubEmailTemplate(type, order, club, newStatus)
 
     const { data, error } = await resend.emails.send({
       from: "Gros Indumentaria <notificaciones@grosindumentaria.com>",

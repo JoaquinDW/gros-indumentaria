@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { notifyRelatedClubs } from "@/lib/email"
+import { notifyRelatedClubs, sendCustomerNotification } from "@/lib/email"
 
 /**
  * Get a specific order by ID
@@ -83,12 +83,15 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // If status changed, notify related clubs
+    // If status changed, notify related clubs and customer
     if (newStatus && oldStatus !== newStatus && order) {
       try {
+        // Notify related clubs
         await notifyRelatedClubs(order, "status_change", supabase, newStatus)
+        // Notify customer
+        await sendCustomerNotification(order, "status_change", newStatus)
       } catch (emailError) {
-        console.error("Error sending club status notifications:", emailError)
+        console.error("Error sending status notifications:", emailError)
       }
     }
 

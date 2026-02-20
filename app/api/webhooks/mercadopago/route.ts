@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { MercadoPagoConfig, Payment } from "mercadopago"
 import { createClient } from "@supabase/supabase-js"
 import crypto from "crypto"
-import { notifyRelatedClubs } from "@/lib/email"
+import { notifyRelatedClubs, sendCustomerNotification } from "@/lib/email"
 
 /**
  * Validates MercadoPago webhook signature
@@ -207,10 +207,13 @@ export async function POST(request: NextRequest) {
               .single()
 
             if (fullOrder) {
+              // Notify related clubs
               await notifyRelatedClubs(fullOrder, "new_order", supabase)
+              // Notify customer
+              await sendCustomerNotification(fullOrder, "new_order")
             }
           } catch (emailError) {
-            console.error("Error sending club notifications:", emailError)
+            console.error("Error sending notifications:", emailError)
           }
           // TODO: Update inventory
           break
