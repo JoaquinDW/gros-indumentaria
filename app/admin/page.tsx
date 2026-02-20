@@ -1708,20 +1708,20 @@ export default function AdminPage() {
                       <div>
                         <p className="text-xs text-gray-500 font-bold">NÚMERO</p>
                         <p className="font-bold" style={{ color: "var(--gros-black)" }}>
-                          {order.orderNumber}
+                          {order.order_number}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 font-bold">CLIENTE</p>
                         <p className="font-bold" style={{ color: "var(--gros-black)" }}>
-                          {order.customerName}
+                          {order.customer_name}
                         </p>
-                        <p className="text-xs text-gray-600">{order.customerEmail}</p>
+                        <p className="text-xs text-gray-600">{order.customer_email}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 font-bold">TOTAL</p>
                         <p className="font-bold text-lg" style={{ color: "var(--gros-red)" }}>
-                          ${order.totalAmount}
+                          ${order.total_amount}
                         </p>
                       </div>
                       <div>
