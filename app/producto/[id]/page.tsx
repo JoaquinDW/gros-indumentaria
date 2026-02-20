@@ -116,22 +116,6 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
       })
       return
     }
-    if (product.name_field_enabled && !personalizationName.trim()) {
-      setAlertModal({
-        isOpen: true,
-        message: "Por favor ingresa el nombre para personalización",
-        type: "error",
-      })
-      return
-    }
-    if (product.number_field_enabled && !personalizationNumber.trim()) {
-      setAlertModal({
-        isOpen: true,
-        message: "Por favor ingresa el número para personalización",
-        type: "error",
-      })
-      return
-    }
     addItem({
       productId: product.id,
       name: product.name,
@@ -392,7 +376,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               {product.name_field_enabled && (
                 <div>
                   <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
-                    Nombre *
+                    Nombre <span style={{ color: "#999999", fontWeight: "normal" }}>(opcional)</span>
                   </label>
                   <input
                     type="text"
@@ -412,7 +396,7 @@ export default function ProductDetail({ params }: { params: Promise<{ id: string
               {product.number_field_enabled && (
                 <div>
                   <label className="block text-sm font-bold mb-3" style={{ color: "var(--gros-black)" }}>
-                    Número *
+                    Número <span style={{ color: "#999999", fontWeight: "normal" }}>(opcional)</span>
                   </label>
                   <input
                     type="text"
