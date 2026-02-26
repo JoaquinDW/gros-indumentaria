@@ -168,6 +168,7 @@ export default function AdminPage() {
 
   // Orders state
   const [orders, setOrders] = useState<any[]>([])
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
 
   const [products, setProducts] = useState<any[]>([])
 
@@ -1742,6 +1743,7 @@ export default function AdminPage() {
                       </div>
                       <div className="text-right">
                         <Button
+                          onClick={() => setSelectedOrder(order)}
                           className="hover:opacity-90"
                           style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
                         >
@@ -1752,6 +1754,118 @@ export default function AdminPage() {
                   </Card>
                 ))}
               </div>
+
+              {/* Order Detail Modal */}
+              {selectedOrder && (
+                <Modal
+                  isOpen={!!selectedOrder}
+                  onClose={() => setSelectedOrder(null)}
+                  title={`Pedido ${selectedOrder.order_number}`}
+                  size="lg"
+                >
+                  <div className="space-y-6">
+                    {/* Date */}
+                    <p className="text-sm text-gray-500">
+                      {new Date(selectedOrder.created_at).toLocaleString("es-AR", {
+                        dateStyle: "long",
+                        timeStyle: "short",
+                      })}
+                    </p>
+
+                    {/* Customer info */}
+                    <div>
+                      <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">Cliente</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm">
+                        <p><span className="font-semibold">Nombre:</span> {selectedOrder.customer_name}</p>
+                        <p><span className="font-semibold">Email:</span> {selectedOrder.customer_email}</p>
+                        {selectedOrder.customer_phone && (
+                          <p><span className="font-semibold">Teléfono:</span> {selectedOrder.customer_phone}</p>
+                        )}
+                        {selectedOrder.customer_province && (
+                          <p><span className="font-semibold">Provincia:</span> {selectedOrder.customer_province}</p>
+                        )}
+                        {selectedOrder.customer_locality && (
+                          <p><span className="font-semibold">Localidad:</span> {selectedOrder.customer_locality}</p>
+                        )}
+                        {selectedOrder.customer_address && (
+                          <p className="sm:col-span-2"><span className="font-semibold">Dirección:</span> {selectedOrder.customer_address}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Delivery */}
+                    <div>
+                      <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">Entrega</h3>
+                      <p className="text-sm">
+                        {selectedOrder.delivery_method === "club"
+                          ? "Retiro en club"
+                          : selectedOrder.delivery_method === "correo"
+                          ? "Envío por correo"
+                          : selectedOrder.delivery_method}
+                      </p>
+                    </div>
+
+                    {/* Payment */}
+                    <div>
+                      <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">Pago</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm">
+                        <p><span className="font-semibold">Método:</span> {selectedOrder.payment_method}</p>
+                        <p>
+                          <span className="font-semibold">Estado:</span>{" "}
+                          <span className={selectedOrder.payment_status === "approved" ? "text-green-600 font-semibold" : "text-yellow-600 font-semibold"}>
+                            {selectedOrder.payment_status}
+                          </span>
+                        </p>
+                        {selectedOrder.transaction_amount != null && (
+                          <p><span className="font-semibold">Monto transacción:</span> ${selectedOrder.transaction_amount}</p>
+                        )}
+                        {selectedOrder.payment_status_detail && (
+                          <p><span className="font-semibold">Detalle:</span> {selectedOrder.payment_status_detail}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Items */}
+                    {selectedOrder.items && Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 && (
+                      <div>
+                        <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">Productos</h3>
+                        <div className="space-y-3">
+                          {selectedOrder.items.map((item: any, idx: number) => (
+                            <div key={idx} className="border border-gray-200 rounded p-3 text-sm">
+                              <p className="font-semibold">{item.product_name || item.name || `Producto ${idx + 1}`}</p>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 mt-1 text-gray-600">
+                                {item.quantity && <p>Cantidad: {item.quantity}</p>}
+                                {item.size && <p>Talle: {item.size}</p>}
+                                {item.color && <p>Color: {item.color}</p>}
+                                {item.fabric && <p>Tela: {item.fabric}</p>}
+                                {item.unit_price != null && <p>Precio unitario: ${item.unit_price}</p>}
+                                {item.personalization_name && <p>Nombre personalización: {item.personalization_name}</p>}
+                                {item.personalization_number && <p>Número personalización: {item.personalization_number}</p>}
+                                {item.customization_text && <p className="col-span-2">Personalización: {item.customization_text}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="flex justify-end border-t pt-4">
+                      <p className="text-lg font-bold" style={{ color: "var(--gros-red)" }}>
+                        Total: ${selectedOrder.total_amount}
+                      </p>
+                    </div>
+
+                    {/* Notes */}
+                    {selectedOrder.notes && (
+                      <div>
+                        <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">Notas</h3>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedOrder.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </Modal>
+              )}
             </div>
           )}
 
