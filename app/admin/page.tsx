@@ -1837,7 +1837,14 @@ export default function AdminPage() {
                         <p>
                           <span className="font-semibold">Estado:</span>{" "}
                           <span className={selectedOrder.payment_status === "approved" ? "text-green-600 font-semibold" : "text-yellow-600 font-semibold"}>
-                            {selectedOrder.payment_status}
+                            {({
+                              pending: "Pendiente",
+                              approved: "Aprobado",
+                              rejected: "Rechazado",
+                              cancelled: "Cancelado",
+                              refunded: "Reembolsado",
+                              in_process: "En proceso",
+                            } as Record<string, string>)[selectedOrder.payment_status] ?? selectedOrder.payment_status}
                           </span>
                         </p>
                         {selectedOrder.transaction_amount != null && (
