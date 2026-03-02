@@ -387,6 +387,11 @@ export default function AdminPage() {
         order.id === orderId ? { ...order, status: newStatus } : order
       ))
 
+      // Actualizar selectedOrder si es la que está abierta en el modal
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, status: newStatus })
+      }
+
       setAlertModal({
         isOpen: true,
         message: "Estado actualizado exitosamente",
