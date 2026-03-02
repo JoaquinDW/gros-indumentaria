@@ -383,14 +383,16 @@ export default function AdminPage() {
       }
 
       // Actualizar estado local después de éxito en API
-      setOrders(orders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      ))
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === orderId ? { ...order, status: newStatus } : order
+        )
+      )
 
       // Actualizar selectedOrder si es la que está abierta en el modal
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus })
-      }
+      setSelectedOrder((prev: any) =>
+        prev?.id === orderId ? { ...prev, status: newStatus } : prev
+      )
 
       setAlertModal({
         isOpen: true,
@@ -1808,6 +1810,23 @@ export default function AdminPage() {
                           ? "Envío por correo"
                           : selectedOrder.delivery_method}
                       </p>
+                    </div>
+
+                    {/* Order Status */}
+                    <div>
+                      <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">Estado del Pedido</h3>
+                      <select
+                        value={selectedOrder.status}
+                        onChange={(e) => updateOrderStatus(selectedOrder.id, e.target.value)}
+                        className="px-3 py-1 border border-gray-300 rounded text-sm"
+                      >
+                        <option value="pending">Pendiente</option>
+                        <option value="approved">Aprobado</option>
+                        <option value="in_production">En producción</option>
+                        <option value="shipped">Enviado</option>
+                        <option value="delivered">Entregado</option>
+                        <option value="rejected">Rechazado</option>
+                      </select>
                     </div>
 
                     {/* Payment */}
