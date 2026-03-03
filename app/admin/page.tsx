@@ -1834,19 +1834,6 @@ export default function AdminPage() {
                       <h3 className="font-bold text-sm uppercase text-gray-500 mb-2">Pago</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm">
                         <p><span className="font-semibold">Método:</span> {selectedOrder.payment_method}</p>
-                        <p>
-                          <span className="font-semibold">Estado:</span>{" "}
-                          <span className={selectedOrder.payment_status === "approved" ? "text-green-600 font-semibold" : "text-yellow-600 font-semibold"}>
-                            {({
-                              pending: "Pendiente",
-                              approved: "Aprobado",
-                              rejected: "Rechazado",
-                              cancelled: "Cancelado",
-                              refunded: "Reembolsado",
-                              in_process: "En proceso",
-                            } as Record<string, string>)[selectedOrder.payment_status] ?? selectedOrder.payment_status}
-                          </span>
-                        </p>
                         {selectedOrder.transaction_amount != null && (
                           <p><span className="font-semibold">Monto transacción:</span> ${selectedOrder.transaction_amount}</p>
                         )}
