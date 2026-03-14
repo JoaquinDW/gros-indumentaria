@@ -140,7 +140,7 @@ export function ClubsSection() {
                   className="w-full"
                 >
                   {club.logo_url ? (
-                    <div className="relative w-full h-24 grayscale group-hover:grayscale-0 transition-all duration-300">
+                    <div className="relative w-full h-24 transition-all duration-300">
                       <img
                         src={club.logo_url}
                         alt={club.name}
