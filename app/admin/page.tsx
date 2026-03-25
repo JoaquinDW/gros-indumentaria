@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder, Users, GripVertical } from "lucide-react"
+import { LogOut, Plus, Package, ShoppingCart, ImageIcon, Folder, Users, GripVertical, FileDown, FileSpreadsheet } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { AlertModal } from "@/components/ui/alert-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -30,6 +30,9 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import * as XLSX from "xlsx"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 // Sortable Product Card Component
 function SortableProductCard({
@@ -406,6 +409,254 @@ export default function AdminPage() {
         type: "error",
       })
     }
+  }
+
+  const exportOrdersToXLSX = () => {
+    if (orders.length === 0) return
+
+    const STATUS_LABELS: Record<string, string> = {
+      pending: "Pendiente",
+      approved: "Aprobado",
+      in_production: "En producción",
+      shipped: "Enviado",
+      delivered: "Entregado",
+      rejected: "Rechazado",
+    }
+
+    const DELIVERY_LABELS: Record<string, string> = {
+      club: "Retiro en club",
+      correo: "Envío por correo",
+    }
+
+    const rows: Record<string, any>[] = []
+
+    for (const order of orders) {
+      const baseRow = {
+        "N° Pedido": order.order_number,
+        "Fecha": new Date(order.created_at).toLocaleString("es-AR", {
+          dateStyle: "short",
+          timeStyle: "short",
+        }),
+        "Cliente": order.customer_name,
+        "Email": order.customer_email,
+        "Teléfono": order.customer_phone ?? "",
+        "Provincia": order.customer_province ?? "",
+        "Localidad": order.customer_locality ?? "",
+        "Dirección": order.customer_address ?? "",
+        "Método de entrega": DELIVERY_LABELS[order.delivery_method] ?? order.delivery_method ?? "",
+        "Estado": STATUS_LABELS[order.status] ?? order.status,
+        "Método de pago": order.payment_method ?? "",
+        "Total": order.total_amount,
+        "Notas": order.notes ?? "",
+      }
+
+      const items =
+        Array.isArray(order.items) && order.items.length > 0 ? order.items : [null]
+
+      for (const item of items) {
+        rows.push({
+          ...baseRow,
+          "Producto": item?.product_name ?? item?.name ?? "",
+          "Cantidad": item?.quantity ?? "",
+          "Talle": item?.size ?? "",
+          "Color": item?.color ?? "",
+          "Tela": item?.fabric ?? "",
+          "Precio unitario": item?.unit_price ?? "",
+          "Nombre personalización": item?.personalization_name ?? "",
+          "Número personalización": item?.personalization_number ?? "",
+          "Texto personalización": item?.customization_text ?? "",
+        })
+      }
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Pedidos")
+
+    const colWidths = Object.keys(rows[0] ?? {}).map((key) => ({
+      wch: Math.max(key.length + 2, 12),
+    }))
+    worksheet["!cols"] = colWidths
+
+    const filename = `pedidos-${new Date().toISOString().slice(0, 10)}.xlsx`
+    XLSX.writeFile(workbook, filename)
+  }
+
+  const downloadOrderPDF = (order: any) => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+
+    const RED: [number, number, number] = [196, 58, 47]
+    const BLACK: [number, number, number] = [26, 26, 26]
+    const GRAY: [number, number, number] = [100, 100, 100]
+
+    const STATUS_LABELS: Record<string, string> = {
+      pending: "Pendiente",
+      approved: "Aprobado",
+      in_production: "En producción",
+      shipped: "Enviado",
+      delivered: "Entregado",
+      rejected: "Rechazado",
+    }
+
+    const DELIVERY_LABELS: Record<string, string> = {
+      club: "Retiro en club",
+      correo: "Envío por correo",
+    }
+
+    let y = 20
+
+    // Header
+    doc.setFontSize(22)
+    doc.setTextColor(...RED)
+    doc.setFont("helvetica", "bold")
+    doc.text("GROS INDUMENTARIA", 14, y)
+
+    y += 8
+    doc.setFontSize(13)
+    doc.setTextColor(...BLACK)
+    doc.text(`Pedido ${order.order_number}`, 14, y)
+
+    y += 6
+    doc.setFontSize(9)
+    doc.setTextColor(...GRAY)
+    doc.text(
+      new Date(order.created_at).toLocaleString("es-AR", {
+        dateStyle: "long",
+        timeStyle: "short",
+      }),
+      14,
+      y
+    )
+
+    y += 10
+    doc.setDrawColor(220, 220, 220)
+    doc.line(14, y, 196, y)
+    y += 8
+
+    const sectionTitle = (label: string) => {
+      doc.setFontSize(8)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(...GRAY)
+      doc.text(label.toUpperCase(), 14, y)
+      y += 5
+    }
+
+    const field = (label: string, value: string) => {
+      if (!value) return
+      doc.setFontSize(10)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(...BLACK)
+      doc.text(`${label}: `, 14, y)
+      const labelWidth = doc.getTextWidth(`${label}: `)
+      doc.setFont("helvetica", "normal")
+      doc.text(value, 14 + labelWidth, y)
+      y += 5.5
+    }
+
+    // Customer
+    sectionTitle("Cliente")
+    field("Nombre", order.customer_name)
+    field("Email", order.customer_email)
+    if (order.customer_phone) field("Teléfono", order.customer_phone)
+    if (order.customer_province) field("Provincia", order.customer_province)
+    if (order.customer_locality) field("Localidad", order.customer_locality)
+    if (order.customer_address) field("Dirección", order.customer_address)
+
+    y += 4
+    doc.line(14, y, 196, y)
+    y += 8
+
+    // Delivery & Status
+    sectionTitle("Entrega y Estado")
+    field(
+      "Método de entrega",
+      DELIVERY_LABELS[order.delivery_method] ?? order.delivery_method ?? ""
+    )
+    field("Estado", STATUS_LABELS[order.status] ?? order.status)
+    field("Método de pago", order.payment_method ?? "")
+
+    y += 4
+    doc.line(14, y, 196, y)
+    y += 8
+
+    // Items table
+    sectionTitle("Productos")
+    y += 2
+
+    const hasPersonalization = (order.items ?? []).some(
+      (item: any) =>
+        item.personalization_name || item.personalization_number || item.customization_text
+    )
+
+    const head = hasPersonalization
+      ? [["Producto", "Cant.", "Talle", "Color", "Tela", "Personalización", "P. Unit."]]
+      : [["Producto", "Cant.", "Talle", "Color", "Tela", "P. Unit."]]
+
+    const body = (order.items ?? []).map((item: any) => {
+      const personalization = [
+        item.personalization_name ? `Nombre: ${item.personalization_name}` : "",
+        item.personalization_number ? `Nro: ${item.personalization_number}` : "",
+        item.customization_text ?? "",
+      ]
+        .filter(Boolean)
+        .join(" / ")
+
+      const row = [
+        item.product_name ?? item.name ?? "",
+        String(item.quantity ?? ""),
+        item.size ?? "",
+        item.color ?? "",
+        item.fabric ?? "",
+        item.unit_price != null ? `$${item.unit_price}` : "",
+      ]
+
+      if (hasPersonalization) {
+        row.splice(5, 0, personalization)
+      }
+
+      return row
+    })
+
+    autoTable(doc, {
+      startY: y,
+      head,
+      body,
+      theme: "grid",
+      headStyles: {
+        fillColor: RED,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 9,
+      },
+      bodyStyles: { fontSize: 9, textColor: BLACK },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      margin: { left: 14, right: 14 },
+    })
+
+    y = (doc as any).lastAutoTable.finalY + 8
+
+    // Total
+    doc.setFontSize(12)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(...RED)
+    const totalText = `Total: $${order.total_amount}`
+    const totalWidth = doc.getTextWidth(totalText)
+    doc.text(totalText, 196 - totalWidth, y)
+
+    // Notes
+    if (order.notes) {
+      y += 10
+      doc.line(14, y, 196, y)
+      y += 8
+      sectionTitle("Notas")
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "normal")
+      doc.setTextColor(...BLACK)
+      const splitNotes = doc.splitTextToSize(order.notes, 182)
+      doc.text(splitNotes, 14, y)
+    }
+
+    doc.save(`pedido-${order.order_number}.pdf`)
   }
 
   const addProduct = async () => {
@@ -1706,9 +1957,20 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto">
           {activeTab === "orders" && (
             <div>
-              <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--gros-black)" }}>
-                Gestión de Pedidos
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold" style={{ color: "var(--gros-black)" }}>
+                  Gestión de Pedidos ({orders.length})
+                </h2>
+                <Button
+                  onClick={exportOrdersToXLSX}
+                  disabled={orders.length === 0}
+                  variant="outline"
+                  className="border-green-600 text-green-700 hover:bg-green-50 font-semibold"
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Exportar Excel
+                </Button>
+              </div>
 
               <div className="space-y-4">
                 {orders.map((order) => (
@@ -1857,9 +2119,21 @@ export default function AdminPage() {
                                 {item.color && <p>Color: {item.color}</p>}
                                 {item.fabric && <p>Tela: {item.fabric}</p>}
                                 {item.unit_price != null && <p>Precio unitario: ${item.unit_price}</p>}
-                                {item.personalization_name && <p>Nombre personalización: {item.personalization_name}</p>}
-                                {item.personalization_number && <p>Número personalización: {item.personalization_number}</p>}
-                                {item.customization_text && <p className="col-span-2">Personalización: {item.customization_text}</p>}
+                                {(item.personalization_name || item.personalizationName) && (
+                                  <p className="col-span-2 font-semibold text-red-600">
+                                    Nombre: {item.personalization_name || item.personalizationName}
+                                  </p>
+                                )}
+                                {(item.personalization_number || item.personalizationNumber) && (
+                                  <p className="col-span-2 font-semibold text-red-600">
+                                    Número: {item.personalization_number || item.personalizationNumber}
+                                  </p>
+                                )}
+                                {(item.customization_text || item.customText) && (
+                                  <p className="col-span-2 font-semibold text-red-600">
+                                    Personalización: {item.customization_text || item.customText}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -1881,6 +2155,18 @@ export default function AdminPage() {
                         <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedOrder.notes}</p>
                       </div>
                     )}
+
+                    {/* PDF Download */}
+                    <div className="flex justify-end border-t pt-4">
+                      <Button
+                        onClick={() => downloadOrderPDF(selectedOrder)}
+                        variant="outline"
+                        className="border-gray-400 text-gray-700 hover:bg-gray-100 font-semibold"
+                      >
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Descargar PDF
+                      </Button>
+                    </div>
                   </div>
                 </Modal>
               )}

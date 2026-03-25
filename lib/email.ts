@@ -300,6 +300,77 @@ export async function sendClubNotification(
   }
 }
 
+export async function sendAdminNotification(
+  order: Order,
+  type: "new_order" | "status_change",
+  newStatus?: string
+): Promise<{ success: boolean; error?: string }> {
+  const adminEmail = "graficagros@gmail.com"
+
+  const resend = getResendClient()
+  if (!resend) {
+    console.error("RESEND_API_KEY not configured")
+    return { success: false, error: "Email service not configured" }
+  }
+
+  const statusLabel = STATUS_LABELS[newStatus || order.status] || order.status
+
+  const subject = type === "new_order"
+    ? `Nueva orden #${order.order_number} - $${order.total_amount}`
+    : `Orden #${order.order_number} - Estado actualizado: ${statusLabel}`
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background-color: #C43A2F; padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">GROS Indumentaria - Admin</h1>
+      </div>
+
+      <div style="padding: 20px; background-color: #ffffff;">
+        <h2 style="color: #333;">${type === "new_order" ? "Nueva Orden Recibida" : "Actualización de Orden"}</h2>
+
+        <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <p style="margin: 4px 0;"><strong>Número de Orden:</strong> ${order.order_number}</p>
+          <p style="margin: 4px 0;"><strong>Cliente:</strong> ${order.customer_name}</p>
+          <p style="margin: 4px 0;"><strong>Email:</strong> ${order.customer_email}</p>
+          ${order.customer_phone ? `<p style="margin: 4px 0;"><strong>Teléfono:</strong> ${order.customer_phone}</p>` : ""}
+          <p style="margin: 4px 0;"><strong>Total:</strong> $${order.total_amount}</p>
+          <p style="margin: 4px 0;"><strong>Estado:</strong> <span style="color: #C43A2F; font-weight: bold;">${statusLabel}</span></p>
+          ${order.delivery_method === "club" ? `<p style="margin: 4px 0;"><strong>Entrega:</strong> En club</p>` : `<p style="margin: 4px 0;"><strong>Entrega:</strong> Correo (${order.customer_address || "sin dirección"})</p>`}
+        </div>
+
+        <h3 style="color: #333;">Productos:</h3>
+        ${formatOrderItems(order.items)}
+
+        ${order.notes ? `<p style="margin-top: 16px;"><strong>Notas:</strong> ${order.notes}</p>` : ""}
+      </div>
+
+      <div style="padding: 16px; background-color: #f3f4f6; text-align: center; font-size: 12px; color: #6b7280;">
+        <p>Notificación interna de GROS Indumentaria.</p>
+      </div>
+    </div>
+  `
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: "GROS Indumentaria <notificaciones@gros.website>",
+      to: adminEmail,
+      subject,
+      html,
+    })
+
+    if (error) {
+      console.error(`Failed to send admin email:`, error)
+      return { success: false, error: error.message }
+    }
+
+    console.log(`Admin email sent to ${adminEmail} - ID: ${data?.id}`)
+    return { success: true }
+  } catch (error) {
+    console.error(`Error sending admin email:`, error)
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
+  }
+}
+
 export async function notifyRelatedClubs(
   order: Order,
   type: "new_order" | "status_change",
