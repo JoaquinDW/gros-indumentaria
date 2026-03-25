@@ -462,9 +462,9 @@ export default function AdminPage() {
           "Color": item?.color ?? "",
           "Tela": item?.fabric ?? "",
           "Precio unitario": item?.unit_price ?? "",
-          "Nombre personalización": item?.personalization_name ?? "",
-          "Número personalización": item?.personalization_number ?? "",
-          "Texto personalización": item?.customization_text ?? "",
+          "Nombre personalización": item?.personalization_name ?? item?.personalizationName ?? "",
+          "Número personalización": item?.personalization_number ?? item?.personalizationNumber ?? "",
+          "Texto personalización": item?.customization_text ?? item?.customText ?? "",
         })
       }
     }
@@ -585,7 +585,9 @@ export default function AdminPage() {
 
     const hasPersonalization = (order.items ?? []).some(
       (item: any) =>
-        item.personalization_name || item.personalization_number || item.customization_text
+        item.personalization_name || item.personalizationName ||
+        item.personalization_number || item.personalizationNumber ||
+        item.customization_text || item.customText
     )
 
     const head = hasPersonalization
@@ -594,9 +596,11 @@ export default function AdminPage() {
 
     const body = (order.items ?? []).map((item: any) => {
       const personalization = [
-        item.personalization_name ? `Nombre: ${item.personalization_name}` : "",
-        item.personalization_number ? `Nro: ${item.personalization_number}` : "",
-        item.customization_text ?? "",
+        (item.personalization_name || item.personalizationName)
+          ? `Nombre: ${item.personalization_name ?? item.personalizationName}` : "",
+        (item.personalization_number || item.personalizationNumber)
+          ? `Nro: ${item.personalization_number ?? item.personalizationNumber}` : "",
+        item.customization_text ?? item.customText ?? "",
       ]
         .filter(Boolean)
         .join(" / ")
