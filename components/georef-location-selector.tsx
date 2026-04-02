@@ -51,10 +51,10 @@ export function GeorefLocationSelector({
   const loadProvinces = async () => {
     try {
       setLoadingProvinces(true)
-      const response = await fetch("/api/georef/provincias")
+      const response = await fetch("https://apis.datos.gob.ar/georef/api/provincias?max=100&campos=id,nombre")
       const data = await response.json()
-      if (data.provinces) {
-        setProvinces(data.provinces)
+      if (data.provincias) {
+        setProvinces(data.provincias.map((p: { id: string; nombre: string }) => ({ id: p.id, nombre: p.nombre })))
       }
     } catch (error) {
       console.error("Error loading provinces:", error)
@@ -66,10 +66,10 @@ export function GeorefLocationSelector({
   const loadLocalities = async (provinceId: string) => {
     try {
       setLoadingLocalities(true)
-      const response = await fetch(`/api/georef/localidades?provincia=${provinceId}`)
+      const response = await fetch(`https://apis.datos.gob.ar/georef/api/localidades?provincia=${provinceId}&campos=id,nombre&max=5000&orden=nombre`)
       const data = await response.json()
-      if (data.localities) {
-        setLocalities(data.localities)
+      if (data.localidades) {
+        setLocalities(data.localidades.map((l: { id: string; nombre: string }) => ({ id: l.id, nombre: l.nombre })))
       }
     } catch (error) {
       console.error("Error loading localities:", error)
