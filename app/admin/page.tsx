@@ -147,6 +147,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [loginError, setLoginError] = useState("")
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean
     message: string
@@ -343,17 +344,18 @@ export default function AdminPage() {
 
   const handleLogin = async () => {
     setLoading(true)
+    setLoginError("")
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
-      setAlertModal({
-        isOpen: true,
-        message: "Error: " + error.message,
-        type: "error",
-      })
+      setLoginError(
+        error.code === "invalid_credentials"
+          ? "El email o la contraseña son incorrectos."
+          : "No se pudo iniciar sesión. Intentá nuevamente."
+      )
     } else {
       setIsLoggedIn(true)
       setEmail("")
@@ -1826,7 +1828,13 @@ export default function AdminPage() {
           <h1 className="text-3xl font-bold font-serif mb-6" style={{ color: "var(--gros-black)" }}>
             Panel Admin
           </h1>
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              handleLogin()
+            }}
+          >
             <div>
               <label className="block text-sm font-bold mb-2" style={{ color: "var(--gros-black)" }}>
                 Email
@@ -1834,8 +1842,12 @@ export default function AdminPage() {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setLoginError("")
+                }}
                 placeholder="administrador@dominio.com"
+                required
               />
             </div>
             <div>
@@ -1845,19 +1857,30 @@ export default function AdminPage() {
               <Input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setLoginError("")
+                }}
                 placeholder="Tu contraseña"
+                aria-invalid={Boolean(loginError)}
+                aria-describedby={loginError ? "login-error" : undefined}
+                required
               />
             </div>
+            {loginError && (
+              <p id="login-error" role="alert" className="text-sm font-medium text-red-600">
+                {loginError}
+              </p>
+            )}
             <Button
-              onClick={handleLogin}
+              type="submit"
               disabled={loading}
               className="w-full hover:opacity-90 font-bold"
               style={{ backgroundColor: "var(--gros-red)", color: "var(--gros-white)" }}
             >
               {loading ? "Cargando..." : "Ingresar"}
             </Button>
-          </div>
+          </form>
         </Card>
       </div>
     )
