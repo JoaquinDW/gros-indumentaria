@@ -58,8 +58,12 @@ export async function POST(request: NextRequest) {
 
     // Get the notification data
     const body = await request.json()
+    const { type, data } = body
 
-    console.log("Mercado Pago Webhook received:", JSON.stringify(body, null, 2))
+    console.info("Mercado Pago webhook received", {
+      type,
+      hasDataId: Boolean(data?.id),
+    })
 
     // Validate webhook signature if secret is configured
     const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET
@@ -93,9 +97,6 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Process the notification based on type
-    const { type, data } = body
-
     if (type === "payment") {
       // Initialize Mercado Pago SDK
       const client = new MercadoPagoConfig({
@@ -108,8 +109,6 @@ export async function POST(request: NextRequest) {
       const paymentId = data.id
       const paymentInfo = await payment.get({ id: paymentId })
 
-      console.log("Payment info:", JSON.stringify(paymentInfo, null, 2))
-
       const {
         status,
         status_detail,
@@ -120,8 +119,10 @@ export async function POST(request: NextRequest) {
         additional_info,
       } = paymentInfo
 
-      console.log(`Payment ${paymentId} - Status: ${status}, Detail: ${status_detail}`)
-      console.log(`Order Reference: ${external_reference}, Amount: ${transaction_amount}`)
+      console.info("Mercado Pago payment status retrieved", {
+        status,
+        statusDetail: status_detail,
+      })
 
       // Check if order already exists (should exist from create-preference)
       const { data: existingOrder, error: fetchError } = await supabase
@@ -157,13 +158,13 @@ export async function POST(request: NextRequest) {
           throw new Error(`Database update failed: ${updateError.message}`)
         }
 
-        console.log(`✅ Order ${existingOrder.order_number} updated with payment status: ${status}`)
+        console.log(`Order updated with payment status: ${status}`)
       } else {
         // Fallback: Create order if it doesn't exist (webhook arrived before create-preference finished)
-        console.warn(`Order not found for ${external_reference}, creating from webhook data`)
+        console.warn("Order not found; creating it from verified webhook data")
         const items = additional_info?.items || []
 
-        const { data: newOrder, error: insertError } = await supabase
+        const { error: insertError } = await supabase
           .from("orders")
           .insert({
             order_number: external_reference || `ORDER-${paymentId}`,
@@ -183,15 +184,13 @@ export async function POST(request: NextRequest) {
             created_at: new Date().toISOString(),
             ...orderUpdateData,
           })
-          .select()
-          .single()
 
         if (insertError) {
           console.error("Error creating order:", insertError)
           throw new Error(`Database insert failed: ${insertError.message}`)
         }
 
-        console.log(`✅ New order created from webhook: ${newOrder?.order_number}`)
+        console.log("New order created from webhook")
       }
 
       // Handle different payment statuses for additional actions

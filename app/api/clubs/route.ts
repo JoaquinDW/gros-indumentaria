@@ -1,25 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { getAdminContext, requireAdmin } from "@/lib/auth/admin"
 
 // GET - List all clubs or filter by type
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const { supabase, isAdmin } = await getAdminContext()
 
     // Get query parameters
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // 'club' or 'organization'
-
-    // Check if user is authenticated to show all clubs, or just active ones
-    const { data: { session } } = await supabase.auth.getSession()
 
     let query = supabase
       .from("clubs")
       .select("*")
       .order("order_index", { ascending: true })
 
-    // If not authenticated, only show active clubs
-    if (!session) {
+    // Non-admin callers only see active clubs.
+    if (!isAdmin) {
       query = query.eq("active", true)
     }
 
@@ -49,13 +46,10 @@ export async function GET(request: NextRequest) {
 // POST - Create a new club
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Verify authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { supabase } = authorization
 
     const body = await request.json()
     const { name, slug, description, logo_url, order_index, active, client_type, background_type, background_value, background_image_url, email } = body

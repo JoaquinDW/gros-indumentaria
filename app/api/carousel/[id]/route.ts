@@ -1,18 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { requireAdmin } from "@/lib/auth/admin"
 
 // PATCH - Update a carousel image
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const supabase = await createClient()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Verify authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { supabase } = authorization
 
     const { id } = await params
     const body = await request.json()
@@ -60,15 +55,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 // DELETE - Delete a carousel image
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const supabase = await createClient()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Verify authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { supabase } = authorization
 
     const { id } = await params
 

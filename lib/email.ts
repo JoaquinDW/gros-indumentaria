@@ -227,7 +227,7 @@ export async function sendCustomerNotification(
   newStatus?: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!order.customer_email) {
-    console.log(`Order ${order.order_number} has no customer email, skipping notification`)
+    console.log("Order has no customer email; skipping notification")
     return { success: true }
   }
 
@@ -248,14 +248,14 @@ export async function sendCustomerNotification(
     })
 
     if (error) {
-      console.error(`Failed to send email to customer ${order.customer_email}:`, error)
+      console.error("Failed to send customer notification email:", error)
       return { success: false, error: error.message }
     }
 
-    console.log(`Email sent to customer ${order.customer_email} - ID: ${data?.id}`)
+    console.log(`Customer notification email sent - ID: ${data?.id}`)
     return { success: true }
   } catch (error) {
-    console.error(`Error sending email to customer ${order.customer_email}:`, error)
+    console.error("Error sending customer notification email:", error)
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
@@ -288,14 +288,14 @@ export async function sendClubNotification(
     })
 
     if (error) {
-      console.error(`Failed to send email to ${club.email}:`, error)
+      console.error(`Failed to send notification to club ${club.name}:`, error)
       return { success: false, error: error.message }
     }
 
-    console.log(`Email sent to ${club.email} (${club.name}) - ID: ${data?.id}`)
+    console.log(`Notification sent to club ${club.name} - ID: ${data?.id}`)
     return { success: true }
   } catch (error) {
-    console.error(`Error sending email to ${club.email}:`, error)
+    console.error(`Error sending notification to club ${club.name}:`, error)
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
@@ -363,7 +363,7 @@ export async function sendAdminNotification(
       return { success: false, error: error.message }
     }
 
-    console.log(`Admin email sent to ${adminEmail} - ID: ${data?.id}`)
+    console.log(`Admin notification email sent - ID: ${data?.id}`)
     return { success: true }
   } catch (error) {
     console.error(`Error sending admin email:`, error)
@@ -406,7 +406,7 @@ export async function notifyRelatedClubs(
   }
 
   if (clubIds.size === 0) {
-    console.log("No related clubs found for order", order.order_number)
+    console.log("No related clubs found for order")
     return
   }
 

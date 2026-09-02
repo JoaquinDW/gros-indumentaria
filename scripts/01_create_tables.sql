@@ -63,18 +63,12 @@ ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for products (public read)
 CREATE POLICY "Products are viewable by everyone" ON products
-  FOR SELECT USING (active = true);
+  FOR SELECT TO anon, authenticated USING (active = true);
 
--- RLS Policies for orders (users can only view their own)
-CREATE POLICY "Users can view their own orders" ON orders
-  FOR SELECT USING (TRUE);
-
-CREATE POLICY "Users can insert their own orders" ON orders
-  FOR INSERT WITH CHECK (TRUE);
-
--- RLS Policies for order_items (users can view orders)
-CREATE POLICY "Users can view order items" ON order_items
-  FOR SELECT USING (TRUE);
+-- Orders, order_items and admin_users intentionally have no public policies.
+-- Server-side checkout/webhook code uses the service role; back-office access
+-- is granted by the harden_admin_access migration after admin membership is
+-- configured.
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);

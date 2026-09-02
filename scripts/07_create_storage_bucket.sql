@@ -13,25 +13,28 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Allow public to view images
 CREATE POLICY "Public can view product images" ON storage.objects
-  FOR SELECT USING (bucket_id = 'product-images');
+  FOR SELECT TO anon, authenticated USING (bucket_id = 'product-images');
 
 -- Allow authenticated users (admins) to upload images
 CREATE POLICY "Authenticated users can upload product images" ON storage.objects
-  FOR INSERT WITH CHECK (
+  FOR INSERT TO authenticated WITH CHECK (
     bucket_id = 'product-images' AND
-    auth.role() = 'authenticated'
+    EXISTS (SELECT 1 FROM public.admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin')
   );
 
 -- Allow authenticated users (admins) to update images
 CREATE POLICY "Authenticated users can update product images" ON storage.objects
-  FOR UPDATE USING (
+  FOR UPDATE TO authenticated USING (
     bucket_id = 'product-images' AND
-    auth.role() = 'authenticated'
+    EXISTS (SELECT 1 FROM public.admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin')
+  ) WITH CHECK (
+    bucket_id = 'product-images' AND
+    EXISTS (SELECT 1 FROM public.admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin')
   );
 
 -- Allow authenticated users (admins) to delete images
 CREATE POLICY "Authenticated users can delete product images" ON storage.objects
-  FOR DELETE USING (
+  FOR DELETE TO authenticated USING (
     bucket_id = 'product-images' AND
-    auth.role() = 'authenticated'
+    EXISTS (SELECT 1 FROM public.admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin')
   );

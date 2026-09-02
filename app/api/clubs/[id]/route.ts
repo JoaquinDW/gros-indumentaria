@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { getAdminContext, requireAdmin } from "@/lib/auth/admin"
 
 // PATCH - Update a club
 export async function PATCH(
@@ -7,13 +7,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Verify authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { supabase } = authorization
 
     const { id } = await params
     const body = await request.json()
@@ -87,13 +84,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Verify authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { supabase } = authorization
 
     const { id } = await params
 
@@ -121,14 +115,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient()
+    const { supabase, isAdmin } = await getAdminContext()
     const { id } = await params
 
-    const { data: club, error } = await supabase
+    let query = supabase
       .from("clubs")
       .select("*")
       .eq("id", id)
-      .single()
+
+    if (!isAdmin) {
+      query = query.eq("active", true)
+    }
+
+    const { data: club, error } = await query.single()
 
     if (error) {
       return NextResponse.json(

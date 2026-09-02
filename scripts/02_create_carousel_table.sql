@@ -17,7 +17,7 @@ ALTER TABLE carousel_images ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy - public can view active carousel images
 CREATE POLICY "Carousel images are viewable by everyone" ON carousel_images
-  FOR SELECT USING (active = true);
+  FOR SELECT TO anon, authenticated USING (active = true);
 
 -- Create index for performance
 CREATE INDEX IF NOT EXISTS idx_carousel_active_order ON carousel_images(active, order_index);

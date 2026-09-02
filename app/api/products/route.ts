@@ -1,20 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { getAdminContext, requireAdmin } from "@/lib/auth/admin"
 
 // GET - List all products (admins see all, public sees only active)
 export async function GET() {
   try {
-    const supabase = await createClient()
-
-    // Check if user is authenticated to determine query
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    const { supabase, isAdmin } = await getAdminContext()
 
     let query = supabase.from("products").select("*").order("order_index", { ascending: true })
 
-    // If not authenticated, only show active products
-    if (!session) {
+    // Non-admin callers only see active products.
+    if (!isAdmin) {
       query = query.eq("active", true)
     }
 
@@ -44,15 +39,10 @@ export async function GET() {
 // POST - Create a new product
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Verify authentication
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { supabase } = authorization
 
     const body = await request.json()
     const {

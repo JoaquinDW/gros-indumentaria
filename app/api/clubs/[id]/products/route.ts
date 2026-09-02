@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/auth/admin"
 import { createClient } from "@/lib/supabase/server"
 
 // GET - Get all products for a specific club
@@ -65,13 +66,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Verify authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { supabase } = authorization
 
     const { id } = await params
     const body = await request.json()
@@ -126,13 +124,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Verify authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { supabase } = authorization
 
     const { id } = await params
     const { searchParams } = new URL(request.url)

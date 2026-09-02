@@ -104,7 +104,9 @@ export async function POST(request: NextRequest) {
       preferenceData.notification_url = `${baseUrl}/api/webhooks/mercadopago`
     }
 
-    console.log("Creating preference with data:", JSON.stringify(preferenceData, null, 2))
+    console.info("Creating Mercado Pago preference", {
+      itemCount: mpItems.length,
+    })
 
     // Create the preference
     const response = await preference.create({ body: preferenceData })
@@ -145,7 +147,7 @@ export async function POST(request: NextRequest) {
       console.error("Error creating pending order:", orderError)
       // Continue anyway - the webhook will create the order if this fails
     } else {
-      console.log(`Order ${externalReference} created with status pending`)
+      console.log("Pending order created")
     }
 
     // Return the init_point (checkout URL)
@@ -159,7 +161,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Error al procesar el pago. Por favor intenta nuevamente.",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     )
