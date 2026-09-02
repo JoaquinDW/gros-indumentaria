@@ -1,22 +1,40 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { type NextRequest } from "next/server"
 import { notifyRelatedClubs, sendAdminNotification, sendCustomerNotification } from "@/lib/email"
+import { requireAdmin } from "@/lib/auth/admin"
+import { noStoreJson } from "@/lib/http/no-store-json"
+
+export const dynamic = "force-dynamic"
+
+const ALLOWED_ORDER_STATUSES = new Set([
+  "pending",
+  "approved",
+  "in_production",
+  "shipped",
+  "delivered",
+  "rejected",
+])
+
+function isValidOrderId(id: string) {
+  return /^\d+$/.test(id) && Number.isSafeInteger(Number(id)) && Number(id) > 0
+}
 
 /**
  * Get a specific order by ID
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
+
+    const { supabase } = authorization
     const { id } = await params
 
-    // Initialize Supabase client with service role key (bypasses RLS)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    if (!isValidOrderId(id)) {
+      return noStoreJson({ error: "ID de pedido inválido" }, { status: 400 })
+    }
 
     // Get order by ID
     const { data: order, error } = await supabase
@@ -27,13 +45,13 @@ export async function GET(
 
     if (error) {
       console.error("Error fetching order:", error)
-      return NextResponse.json({ error: error.message }, { status: 404 })
+      return noStoreJson({ error: "Pedido no encontrado" }, { status: 404 })
     }
 
-    return NextResponse.json({ order })
+    return noStoreJson({ order })
   } catch (error) {
     console.error("Error in order API:", error)
-    return NextResponse.json(
+    return noStoreJson(
       { error: "Internal server error" },
       { status: 500 }
     )
@@ -48,30 +66,44 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
-    const body = await request.json()
+    const authorization = await requireAdmin()
+    if (!authorization.authorized) return authorization.response
 
-    // Initialize Supabase client with service role key (bypasses RLS)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const { supabase } = authorization
+    const { id } = await params
+
+    if (!isValidOrderId(id)) {
+      return noStoreJson({ error: "ID de pedido inválido" }, { status: 400 })
+    }
+
+    const body = await request.json().catch(() => null)
+    const newStatus = body?.status
+
+    if (typeof newStatus !== "string" || !ALLOWED_ORDER_STATUSES.has(newStatus)) {
+      return noStoreJson(
+        { error: "Estado de pedido inválido" },
+        { status: 400 }
+      )
+    }
 
     // Get current order to check for status change
-    const { data: currentOrder } = await supabase
+    const { data: currentOrder, error: currentOrderError } = await supabase
       .from("orders")
       .select("status")
       .eq("id", id)
       .single()
 
+    if (currentOrderError || !currentOrder) {
+      return noStoreJson({ error: "Pedido no encontrado" }, { status: 404 })
+    }
+
     const oldStatus = currentOrder?.status
-    const newStatus = body.status
 
     // Update order
     const { data: order, error } = await supabase
       .from("orders")
       .update({
-        ...body,
+        status: newStatus,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -80,7 +112,10 @@ export async function PATCH(
 
     if (error) {
       console.error("Error updating order:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return noStoreJson(
+        { error: "Error al actualizar el pedido" },
+        { status: 500 }
+      )
     }
 
     // If status changed, notify related clubs and customer
@@ -99,10 +134,10 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({ order })
+    return noStoreJson({ order })
   } catch (error) {
     console.error("Error in order update API:", error)
-    return NextResponse.json(
+    return noStoreJson(
       { error: "Internal server error" },
       { status: 500 }
     )

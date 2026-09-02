@@ -15,19 +15,25 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy - public can view active categories
 CREATE POLICY "Categories are viewable by everyone" ON categories
-  FOR SELECT USING (active = true);
+  FOR SELECT TO anon, authenticated USING (active = true);
 
 -- RLS Policy - authenticated users (admins) can insert categories
 CREATE POLICY "Authenticated users can insert categories" ON categories
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin')
+  );
 
 -- RLS Policy - authenticated users (admins) can update categories
 CREATE POLICY "Authenticated users can update categories" ON categories
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'))
+  WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 -- RLS Policy - authenticated users (admins) can delete categories
 CREATE POLICY "Authenticated users can delete categories" ON categories
-  FOR DELETE USING (auth.role() = 'authenticated');
+  FOR DELETE TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 -- Create index for performance
 CREATE INDEX IF NOT EXISTS idx_categories_active_order ON categories(active, order_index);

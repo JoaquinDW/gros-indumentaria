@@ -33,47 +33,56 @@ ALTER TABLE club_products ENABLE ROW LEVEL SECURITY;
 -- Public can view active clubs
 DROP POLICY IF EXISTS "Clubs are viewable by everyone" ON clubs;
 CREATE POLICY "Clubs are viewable by everyone" ON clubs
-  FOR SELECT USING (active = true);
+  FOR SELECT TO anon, authenticated USING (active = true);
 
 -- Authenticated users can view all clubs (including inactive)
 DROP POLICY IF EXISTS "Authenticated users can view all clubs" ON clubs;
 CREATE POLICY "Authenticated users can view all clubs" ON clubs
-  FOR SELECT USING (auth.role() = 'authenticated');
+  FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 -- Authenticated users can insert clubs
 DROP POLICY IF EXISTS "Authenticated users can insert clubs" ON clubs;
 CREATE POLICY "Authenticated users can insert clubs" ON clubs
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+  FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 -- Authenticated users can update clubs
 DROP POLICY IF EXISTS "Authenticated users can update clubs" ON clubs;
 CREATE POLICY "Authenticated users can update clubs" ON clubs
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'))
+  WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 -- Authenticated users can delete clubs
 DROP POLICY IF EXISTS "Authenticated users can delete clubs" ON clubs;
 CREATE POLICY "Authenticated users can delete clubs" ON clubs
-  FOR DELETE USING (auth.role() = 'authenticated');
+  FOR DELETE TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 -- RLS Policies for club_products table
 
 -- Public can view club-product associations
 DROP POLICY IF EXISTS "Club products are viewable by everyone" ON club_products;
 CREATE POLICY "Club products are viewable by everyone" ON club_products
-  FOR SELECT USING (TRUE);
+  FOR SELECT TO anon, authenticated USING (TRUE);
 
 -- Authenticated users can manage club products
 DROP POLICY IF EXISTS "Authenticated users can insert club products" ON club_products;
 CREATE POLICY "Authenticated users can insert club products" ON club_products
-  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+  FOR INSERT TO authenticated
+  WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 DROP POLICY IF EXISTS "Authenticated users can update club products" ON club_products;
 CREATE POLICY "Authenticated users can update club products" ON club_products
-  FOR UPDATE USING (auth.role() = 'authenticated');
+  FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'))
+  WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 DROP POLICY IF EXISTS "Authenticated users can delete club products" ON club_products;
 CREATE POLICY "Authenticated users can delete club products" ON club_products
-  FOR DELETE USING (auth.role() = 'authenticated');
+  FOR DELETE TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = (SELECT auth.uid()) AND role = 'admin'));
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_clubs_active_order ON clubs(active, order_index);

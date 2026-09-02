@@ -1835,7 +1835,7 @@ export default function AdminPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@gros.com"
+                placeholder="administrador@dominio.com"
               />
             </div>
             <div>

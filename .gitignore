@@ -33,6 +33,9 @@ pnpm-debug.log*
 # vercel
 .vercel
 
+# supabase local CLI state
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
